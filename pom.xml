@@ -1,6 +1,4 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.jolie-lang</groupId>
@@ -10,17 +8,25 @@
     </parent>
     <groupId>org.jolie-lang</groupId>
     <artifactId>jolieslicer</artifactId>
-    <version>${jolie.version}</version>
+    <version>0.1.0</version>
     <packaging>jar</packaging>
+    <url>https://github.com/jolie/slicer</url>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
+        <jolie.version>1.10.1</jolie.version>
     </properties>
     <name>jolieslicer</name>
-    <description>Tool to slice a jolie program</description>
+    <description>A tool for slicing Jolie modules</description>
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.0</version>
+                <configuration>
+                    <release>11</release>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
@@ -37,14 +43,13 @@
                                 <artifactItem>
                                     <groupId>org.jolie-lang</groupId>
                                     <artifactId>${project.artifactId}</artifactId>
-                                    <version>${jolie.version}</version>
+                                    <version>${project.version}</version>
                                     <type>jar</type>
                                     <destFileName>${project.artifactId}.jar</destFileName>
                                 </artifactItem>
                             </artifactItems>
                             <outputDirectory>${project.parent.basedir}/${jolie.installation.directory}/tools
                             </outputDirectory>
-
                         </configuration>
                     </execution>
                 </executions>
@@ -53,22 +58,22 @@
     </build>
     <dependencies>
         <dependency>
-            <groupId>${project.groupId}</groupId>
+            <groupId>org.jolie-lang</groupId>
             <artifactId>jolie</artifactId>
             <version>${jolie.version}</version>
         </dependency>
         <dependency>
-            <groupId>${project.groupId}</groupId>
+            <groupId>org.jolie-lang</groupId>
             <artifactId>libjolie</artifactId>
             <version>${jolie.version}</version>
         </dependency>
         <dependency>
-            <groupId>${project.groupId}</groupId>
+            <groupId>org.jolie-lang</groupId>
             <artifactId>jolie-js</artifactId>
             <version>${jolie.version}</version>
         </dependency>
         <dependency>
-            <groupId>${project.groupId}</groupId>
+            <groupId>org.jolie-lang</groupId>
             <artifactId>jolie-cli</artifactId>
             <version>${jolie.version}</version>
         </dependency>
