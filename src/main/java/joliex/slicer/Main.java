@@ -20,7 +20,7 @@
  *   For details about the authors of this software, see the AUTHORS file. *
  ***************************************************************************/
 
-package jolie.slicer;
+package joliex.slicer;
 
 import java.io.IOException;
 import java.util.Map;

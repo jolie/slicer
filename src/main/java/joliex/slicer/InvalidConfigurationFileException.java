@@ -1,4 +1,4 @@
-package jolie.slicer;
+package joliex.slicer;
 
 public class InvalidConfigurationFileException extends Exception {
 

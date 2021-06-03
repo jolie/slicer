@@ -1,4 +1,4 @@
-package jolie.slicer;
+package joliex.slicer;
 
 import jolie.lang.parse.OLVisitor;
 import jolie.lang.parse.ast.*;

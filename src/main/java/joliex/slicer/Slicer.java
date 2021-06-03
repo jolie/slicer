@@ -1,5 +1,5 @@
 
-package jolie.slicer;
+package joliex.slicer;
 
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
@@ -69,7 +69,12 @@ public class Slicer {
 		final StringBuilder msg = new StringBuilder();
 		final Path programPath = Paths.get( program.context().sourceName() ).getFileName();
 
-		final Set< String > undeclaredServices = new HashSet<>( config.keySet() );
+		final Set< String > undeclaredServices = ((Set<?>) config.keySet())
+				.stream()
+				.filter( String.class::isInstance )
+				.map( String.class::cast )
+				.collect( Collectors.toSet() );
+
 		undeclaredServices.removeAll( declaredServices.entrySet() );
 		if( !undeclaredServices.isEmpty() ) {
 			for( String service : undeclaredServices ) {

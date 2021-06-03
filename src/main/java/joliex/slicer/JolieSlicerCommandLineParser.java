@@ -1,4 +1,4 @@
-package jolie.slicer;
+package joliex.slicer;
 
 import java.io.File;
 import java.io.IOException;
