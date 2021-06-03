@@ -132,13 +132,14 @@ fabric.properties
 
 *.iml
 modules.xml
-.idea/misc.xml
+.idea/
 *.ipr
 
 ### Java ###
 # Compiled class file
 target/
-.java-version # jenv - macOS
+# jenv
+.java-version
 *.class
 
 # Log file
