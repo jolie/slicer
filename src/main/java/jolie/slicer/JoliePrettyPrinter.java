@@ -926,7 +926,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 			.space()
 			.ifPresent( n.parameterConfiguration(), ( param, _0 ) -> _0
 				.parens( _1 -> _1
-					.append( param.type().id() )
+					.append( param.type().name() )
 					.space()
 					.colon()
 					.space()
