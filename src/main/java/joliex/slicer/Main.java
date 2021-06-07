@@ -48,12 +48,7 @@ public class Main {
 	private static final boolean INCLUDE_DOCUMENTATION = false;
 
 	public static void main( String[] args ) {
-		System.out.println( "Hello world!" );
 
-		// TODO: Extend CommandLineParser with a new option to slice a service
-		// - Understand if its okey to extend the command line parser or what
-		// - There are a lot of things that the constructor of CLP does that maybe
-		// we are not inrested in
 		try( JolieSlicerCommandLineParser cmdLnParser =
 			JolieSlicerCommandLineParser.create( args, Main.class.getClassLoader() ) ) {
 
@@ -73,6 +68,8 @@ public class Main {
 				intConf.constants(),
 				semVerConfig,
 				INCLUDE_DOCUMENTATION );
+
+
 
 			Slicer slicer = Slicer.create(
 				program,
