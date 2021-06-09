@@ -1,5 +1,5 @@
 {
-	  "name": "@jolie/jolieslicer",
+	  "name": "@jolie/slicer",
 	  "description": "A slicer for Jolie modules",
 	  "contributors": [
 		    {
@@ -14,6 +14,7 @@
 	  "bin": {
 		    "jolieslicer": "./main.ol"
 	  },
+	  "distJar": "jolieslicer-0.1.0.jar",
 	  "version": "0.1.0",
 	  "license": "LGPL 2.1",
 	  "keywords": ["jolie","microservices"]
