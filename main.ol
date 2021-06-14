@@ -62,8 +62,8 @@ service Main {
 				if( !is_defined(request.config) && !is_defined(request.program) ) {
 					throw( MissingArgument, "An argument is missing" )
 				}
+			  slice@slicer( request )()
 			}
-			slice@slicer( request )()
 		}
 	}
 }
