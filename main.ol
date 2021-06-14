@@ -2,10 +2,14 @@
 
 from string-utils import StringUtils
 from console import Console
+from runtime import Runtime
+from file import File
 
 from .jolie-slicer import Slicer
 
 service Launcher {
+	  embed Runtime as runtime
+	  embed File as file
     embed StringUtils as S
     embed Console as C
     embed Slicer as Slicer
@@ -37,6 +41,16 @@ service Launcher {
                 throw( MissingArgument, "An argument is missing" )
             }
         }
+        getRealServiceDirectory@file()( home )
+		    getFileSeparator@file()( sep )
+        println@C( home )()
+
+		    // loadEmbeddedService@runtime( {
+			  //     filepath = home + sep + "jolie-slicer.ol"
+        //     // type = "Java"
+			  //     service = "Slicer"
+			  //     // params -> config
+		    // } )()
         // slice@Slicer( request )()
     }
 }
