@@ -12,10 +12,10 @@
 		    }
 	  ],
 	  "bin": {
-		    "jolieslicer": "./main.ol"
+		    "jolieslicer": "./launcher.ol"
 	  },
 	  "distJar": "jolieslicer-0.1.0.jar",
-	  "version": "0.1.0",
+	  "version": "0.1.1",
 	  "license": "LGPL 2.1",
 	  "keywords": ["jolie","microservices"]
 }

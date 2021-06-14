@@ -22,58 +22,48 @@
 
 from string-utils import StringUtils
 from console import Console
-from runtime import Runtime
-from file import File
 
 from jolie-slicer import Slicer
 
-service Launcher {
-	embed Runtime as runtime
-	embed File as file
-	embed StringUtils as stringUtils
-	embed Console as console
+service Main {
 	embed Slicer as slicer
+	embed Console as console
+	embed StringUtils as stringUtils
+
+	inputPort input {
+		location: "local"
+		RequestResponse: run
+	}
 
 	define usage {
-		println@console( "Usage: slicer <program_file> -c <config_file> -o <output_directory>" )()
+		println@console( "Usage: jolieslicer <program_file> -c <config_file> -o <output_directory>" )()
 	}
-	
+
 	main {
-		scope( usage ) {
-			install( default => usage )
-			i = 0
-			while( i < #args ) {
-				if( args[i] == "--config" || args[i] == "-c" ) {
-					request.config = args[++i]
-				} else if ( args[i] == "--output" || args[i] == "-o" ) {
-					request.outputDirectory = args[++i]
-				} else {
-					startsWith@stringUtils( args[i] { prefix = "-" } )( isAnOption )
-					if( isAnOption ) {
-						throw( UnrecognizedOption, "Unrecognized option " + args[i] )
+		run( launcherRequest )() {
+			scope( usage ) {
+				install( default => usage )
+				i = 0
+				while( i < #launcherRequest.args ) {
+					if( launcherRequest.args[i] == "--config" || launcherRequest.args[i] == "-c" ) {
+						request.config = launcherRequest.args[++i]
+					} else if ( launcherRequest.args[i] == "--output" || launcherRequest.args[i] == "-o" ) {
+						request.outputDirectory = launcherRequest.args[++i]
 					} else {
-						request.program = args[i]
+						startsWith@stringUtils( launcherRequest.args[i] { prefix = "-" } )( isAnOption )
+						if( isAnOption ) {
+							throw( UnrecognizedOption, "Unrecognized option " + launcherRequest.args[i] )
+						} else {
+							request.program = launcherRequest.args[i]
+						}
 					}
+					++i
 				}
-				++i
+				if( !is_defined(request.config) && !is_defined(request.program) ) {
+					throw( MissingArgument, "An argument is missing" )
+				}
 			}
-			if( !is_defined(request.config) && !is_defined(request.program) ) {
-				throw( MissingArgument, "An argument is missing" )
-			}
+			slice@slicer( request )()
 		}
-
-		getRealServiceDirectory@file()( home )
-		getFileSeparator@file()( fs )
-		println@console( home )()
-
-
-
-			// loadEmbeddedService@runtime( {
-			  //     filepath = home + sep + "jolie-slicer.ol"
-		//     // type = "Java"
-			  //     service = "Slicer"
-			  //     // params -> config
-			// } )()
-		// slice@Slicer( request )()
 	}
 }
