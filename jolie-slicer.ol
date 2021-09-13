@@ -12,7 +12,7 @@ type SliceRequest: void {
 interface SlicerInterface {
 RequestResponse:
 	slice( SliceRequest )( void ) throws
-		FileNotFound( FileNotFoundType )
+		NoSuchFileException( JavaExceptionType )
 		IOException( IOExceptionType )
 		ParserException( JavaExceptionType )
 		InvalidConfigurationFileException( JavaExceptionType )

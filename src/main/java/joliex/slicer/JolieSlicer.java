@@ -29,7 +29,6 @@ import jolie.runtime.JavaService;
 import jolie.runtime.Value;
 import jolie.runtime.embedding.RequestResponse;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -71,8 +70,6 @@ public class JolieSlicer extends JavaService {
 
             slicer.generateServiceDirectories();
 
-        } catch ( FileNotFoundException e ) {
-            throw new FaultException( "FileNotFound", e );
         } catch ( ParserException | InvalidConfigurationFileException | IOException e ) {
             throw new FaultException( e.getClass().getSimpleName(), e );
         }

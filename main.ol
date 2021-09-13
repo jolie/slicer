@@ -23,7 +23,7 @@
 from string-utils import StringUtils
 from console import Console
 
-from jolie-slicer import Slicer
+from .jolie-slicer import Slicer
 
 service Main {
 	embed Slicer as slicer
@@ -35,14 +35,21 @@ service Main {
 		RequestResponse: run
 	}
 
-	define usage {
+	define printUsage {
 		println@console( "Usage: jolieslicer <program_file> -c <config_file> -o <output_directory>" )()
 	}
 
 	main {
 		run( launcherRequest )() {
 			scope( usage ) {
-				install( default => usage )
+				install(
+						NoSuchFileException =>
+							println@console( "No such file: " + usage.NoSuchFileException )();
+							printUsage,
+						default =>
+							println@console( usage.default + " " + usage.( usage.default ))();
+							printUsage
+						)
 				i = 0
 				while( i < #launcherRequest.args ) {
 					if( launcherRequest.args[i] == "--config" || launcherRequest.args[i] == "-c" ) {
@@ -59,10 +66,10 @@ service Main {
 					}
 					++i
 				}
-				if( !is_defined(request.config) && !is_defined(request.program) ) {
+				if( !is_defined(request.config) || !is_defined(request.program) ) {
 					throw( MissingArgument, "An argument is missing" )
 				}
-			  slice@slicer( request )()
+				slice@slicer( request )()
 			}
 		}
 	}
