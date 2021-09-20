@@ -11,7 +11,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.source>11</maven.compiler.source>
 		<maven.compiler.target>11</maven.compiler.target>
-		<jolie.version>1.10.4</jolie.version>
+		<jolie.version>1.10.6-git</jolie.version>
 	</properties>
 	<packaging>jar</packaging>
 	<build>

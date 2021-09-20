@@ -418,12 +418,11 @@ public class DependenciesResolver implements OLVisitor< Unit, Set< OLSyntaxNode 
 
 	@Override
 	public Set< OLSyntaxNode > visit( TypeInlineDefinition tid, Unit ctx ) {
-		if( declDependencies.get( tid ) != null ) {
+		if( declDependencies.get( tid ) != null ) { // Dependencies already computed
 			return declDependencies.get( tid );
 		}
+		// Otherwise compute its dependencies by visiting the subtypes:
 		Set< OLSyntaxNode > newDependencies = new HashSet<>();
-		assert declDependencies.containsKey( tid );
-
 		if( tid.subTypes() != null ) {
 			tid.subTypes()
 				.stream()
@@ -431,7 +430,10 @@ public class DependenciesResolver implements OLVisitor< Unit, Set< OLSyntaxNode 
 				.forEach( newDependencies::addAll );
 		}
 
-		declDependencies.put( tid, newDependencies );
+		if ( declDependencies.containsKey( tid ) ) { // If tid is a top level declaration
+			// Update its dependencies
+			declDependencies.put( tid, newDependencies );
+		}
 		return newDependencies;
 	}
 
@@ -447,6 +449,8 @@ public class DependenciesResolver implements OLVisitor< Unit, Set< OLSyntaxNode 
 		} else if( importedSymbolsMap.containsKey( tdl.linkedTypeName() ) ) {
 			newDependencies.add( importedSymbolsMap.get( tdl.linkedTypeName() ) );
 		} else {
+			// We end up here for the type definition type PAID : long
+			// For which linkedType is null, linkedTypeName is the string "PAID"
 			assert false;
 		}
 		declDependencies.put( tdl, newDependencies );
@@ -458,11 +462,14 @@ public class DependenciesResolver implements OLVisitor< Unit, Set< OLSyntaxNode 
 		if( declDependencies.get( tcd ) != null ) {
 			return declDependencies.get( tcd );
 		}
-		assert declDependencies.containsKey( tcd );
+		// Otherwise compute its dependencies by visiting each alternative:
 		Set< OLSyntaxNode > newDependencies = new HashSet<>();
 		newDependencies.addAll( tcd.left().accept( this ) );
 		newDependencies.addAll( tcd.right().accept( this ) );
-		declDependencies.put( tcd, newDependencies );
+		if ( declDependencies.containsKey( tcd ) ) { // If tcd is a top level declaration
+			// Update its dependencies
+			declDependencies.put( tcd, newDependencies );
+		}
 		return newDependencies;
 	}
 

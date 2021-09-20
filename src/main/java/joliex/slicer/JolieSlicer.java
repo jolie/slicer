@@ -20,10 +20,17 @@
 
 package joliex.slicer;
 
+import jolie.Interpreter;
+import jolie.cli.CommandLineException;
+import jolie.cli.CommandLineParser;
+import jolie.lang.CodeCheckingException;
 import jolie.lang.parse.OLParser;
 import jolie.lang.parse.ParserException;
 import jolie.lang.parse.Scanner;
+import jolie.lang.parse.SemanticVerifier;
 import jolie.lang.parse.ast.Program;
+import jolie.lang.parse.module.ModuleException;
+import jolie.lang.parse.util.ParsingUtils;
 import jolie.runtime.FaultException;
 import jolie.runtime.JavaService;
 import jolie.runtime.Value;
@@ -33,13 +40,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.stream.Stream;
 
 
 public class JolieSlicer extends JavaService {
 
     private static final boolean INCLUDE_DOCUMENTATION = false;
     private static final String[] EMPTY_INCLUDE_PATHS = new String[0];
-    private static final ClassLoader CLASS_LOADER = Main.class.getClassLoader();
+    private static final ClassLoader CLASS_LOADER = JolieSlicer.class.getClassLoader();
 
     @RequestResponse
     public void slice( Value request ) throws FaultException {
@@ -55,13 +65,47 @@ public class JolieSlicer extends JavaService {
             filename = filename.substring( 0, fileExtensionIndex );
             outputDirectory = programPath.resolveSibling( filename );
         }
+        ArrayList<String> newArgs = new ArrayList<>();
+        String[] interpreterArgs = Interpreter.getInstance().optionArgs();
+        
+        for(int i = 0; i < interpreterArgs.length; i++ ) {
+            if( "-p".equals(interpreterArgs[i]) ) {
+                newArgs.add(interpreterArgs[i]);
+                i++;
+                newArgs.add(interpreterArgs[i]);
+            }
+        }
+        newArgs.add( programPath.toString() );
 
-        try ( InputStream stream = Files.newInputStream( programPath ) ) {
-            final Path programDirectory = programPath.getParent();
+        /* try ( InputStream stream = Files.newInputStream( programPath ) ) { */
+            final Path absolute = programPath.toAbsolutePath();
+            final Path programDirectory = absolute.getParent();
 
+            
+            try( CommandLineParser cmdLnParser =
+			            new CommandLineParser( newArgs.toArray(new String[0]), JolieSlicer.class.getClassLoader() ) ) {
+
+			Interpreter.Configuration intConf = cmdLnParser.getInterpreterConfiguration();
+
+			SemanticVerifier.Configuration semVerConfig =
+				new SemanticVerifier.Configuration( intConf.executionTarget() );
+			semVerConfig.setCheckForMain( false );
+
+			Program program = ParsingUtils.parseProgram(
+				intConf.inputStream(),
+				intConf.programFilepath().toURI(),
+				intConf.charset(),
+				intConf.includePaths(),
+				intConf.packagePaths(),
+				intConf.jolieClassLoader(),
+				intConf.constants(),
+				semVerConfig,
+				INCLUDE_DOCUMENTATION );
+            
+            /*
             final Scanner scanner = new Scanner(stream, programDirectory.toUri(), null, INCLUDE_DOCUMENTATION);
             final OLParser olParser = new OLParser(scanner, EMPTY_INCLUDE_PATHS, CLASS_LOADER);
-            final Program program = olParser.parse();
+            final Program program = olParser.parse(); */
 
             final Slicer slicer = Slicer.create(
                     program,
@@ -70,7 +114,7 @@ public class JolieSlicer extends JavaService {
 
             slicer.generateServiceDirectories();
 
-        } catch ( ParserException | InvalidConfigurationFileException | IOException e ) {
+        } catch ( ParserException | InvalidConfigurationFileException | CodeCheckingException | ModuleException | CommandLineException | IOException e ) {
             throw new FaultException( e.getClass().getSimpleName(), e );
         }
     }

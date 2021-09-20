@@ -127,7 +127,7 @@ import jolie.util.Pair;
 
 public class JoliePrettyPrinter implements UnitOLVisitor {
 	final PrettyPrinter pp = new PrettyPrinter();
-	boolean isTopLevelTypeDeclaration = false;
+	boolean isTopLevelTypeDeclaration = true;
 
 	public String toString() {
 		return pp.pp.toString();
@@ -213,7 +213,9 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 		pp.append( n.id() )
 			.append( '@' )
 			.append( n.outputPortId() )
-			.spacedParens( _0 -> n.outputExpression().accept( this ) )
+			.spacedParens( _0 -> _0
+				.ifPresent( Optional.ofNullable( n.outputExpression() ),
+					( outExpre, _1 ) -> outExpre.accept( this ) ) )
 			.spacedParens( _0 -> _0
 				.ifPresent(
 					Optional.ofNullable( n.inputVarPath() ),
@@ -586,7 +588,9 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 	@Override
 	public void visit( DeepCopyStatement n ) {
 		n.leftPath().accept( this );
-		pp.append( n.copyLinks() ? "<<-" : "<<" );
+		pp.surround(
+			PrettyPrinter::space,
+			asPPConsumer( PrettyPrinter::append, n.copyLinks() ? "<<-" : "<<" ) ) ;
 		n.rightExpression().accept( this );
 	}
 
@@ -745,7 +749,20 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( VariablePathNode n ) {
-		pp.append( n.toPrettyString() );
+		pp.onlyIf( n.isGlobal(), _0 -> _0.append( Constants.GLOBAL ).dot() )
+			.intercalate( n.path(),
+				(element, pp) -> {
+					OLSyntaxNode node = element.key();
+					pp
+					.ifTrueOrElse(
+						node instanceof ConstantStringExpression,
+						asPPConsumer( PrettyPrinter::append, ( (ConstantStringExpression) node ).value() ),
+						pp1 -> pp1.spacedParens( _0 -> node.accept( this ) ) )
+					.ifPresent(
+						Optional.ofNullable( element.value() ),
+						(value, pp1) -> pp1.brackets( _0 -> value.accept( this ) ) );
+				},
+				PrettyPrinter::dot );
 	}
 
 	@Override
@@ -868,37 +885,46 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 	@Override
 	public void visit( NotificationForwardStatement n ) {
 		// TODO Auto-generated method stub
-
+		assert false : "not implemented";
 	}
 
 	@Override
 	public void visit( SolicitResponseForwardStatement n ) {
 		// TODO Auto-generated method stub
-
+		assert false : "not implemented";
 	}
 
 	@Override
 	public void visit( InterfaceExtenderDefinition n ) {
 		// TODO Auto-generated method stub
-
+		assert false : "not implemented";
 	}
 
 	@Override
 	public void visit( InlineTreeExpressionNode n ) {
 		// TODO Auto-generated method stub
-
+		assert false : "not implemented";
 	}
 
 	@Override
 	public void visit( VoidExpressionNode n ) {
 		// TODO Auto-generated method stub
-
+		assert false : "not implemented";
 	}
 
 	@Override
 	public void visit( ProvideUntilStatement n ) {
-		// TODO Auto-generated method stub
-
+		pp.append( "provide" )
+			.nest( pp -> {
+				pp.newline();
+				n.provide().accept( this );
+			} )
+			.newline()
+			.append( "until" )
+			.nest( pp -> {
+				pp.newline();
+				n.until().accept( this );
+			} ) ;
 	}
 
 	@Override
@@ -913,7 +939,16 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( ImportStatement n ) {
-		pp.append( n.toString() );
+		pp.append( "from" )
+			.surround(
+				PrettyPrinter::space,
+				asPPConsumer(PrettyPrinter::append, n.prettyPrintTarget() ) )
+			.append( "import" )
+			.space()
+			.intercalate(
+				Arrays.asList( n.importSymbolTargets() ),
+				( symbol, pp ) -> pp.append( symbol.toString() ),
+				PrettyPrinter::comma );
 	}
 
 	@Override
@@ -1109,8 +1144,11 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 		}
 
 		public PrettyPrinter onlyIf( boolean condition, Consumer< PrettyPrinter > prettyPrinter ) {
-			return ifTrueOrElse( condition, prettyPrinter, p -> {
-			} );
+			return ifTrueOrElse( condition, prettyPrinter, PrettyPrinter::empty );
+		}
+
+		public PrettyPrinter empty() {
+			return this;
 		}
 
 		public PrettyPrinter space() {

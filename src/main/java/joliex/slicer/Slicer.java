@@ -94,7 +94,7 @@ public class Slicer {
 				.map( String.class::cast )
 				.collect( Collectors.toSet() );
 
-		undeclaredServices.removeAll( declaredServices.entrySet() );
+		// undeclaredServices.removeAll( declaredServices.entrySet() );
 		if( !undeclaredServices.isEmpty() ) {
 			for( String service : undeclaredServices ) {
 				msg.append( "Service " )
