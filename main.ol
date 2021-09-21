@@ -36,18 +36,19 @@ service Main {
 	}
 
 	define printUsage {
-		println@console( "Usage: jolieslicer <program_file> -c <config_file> -o <output_directory>" )()
+		if( is_defined( __tool ) && is_string( __tool ) ) {
+			println@console( "Usage: " + __tool + " <program_file> -c <config_file> -o <output_directory>" )()
+		} else {
+			println@console( "Usage: slicer <program_file> -c <config_file> -o <output_directory>" )()
+		}
 	}
 
 	main {
 		run( launcherRequest )() {
 			scope( usage ) {
-				install(
-						NoSuchFileException =>
-							println@console( "No such file: " + usage.NoSuchFileException )();
-							printUsage,
-						default =>
-							println@console( usage.default + " " + usage.( usage.default ))();
+				install( default =>
+							println@console( usage.( usage.default ) )();
+							__tool = launcherRequest;
 							printUsage
 						)
 				i = 0
@@ -69,7 +70,11 @@ service Main {
 				if( !is_defined(request.config) || !is_defined(request.program) ) {
 					throw( MissingArgument, "An argument is missing" )
 				}
-				slice@slicer( request )()
+				// Here we receive java exceptions from the slicer, so we print the stack trace instead
+				install( default =>
+							println@console( usage.( usage.default ).stackTrace )()
+				)
+				slice@slicer( request )(  )
 			}
 		}
 	}
