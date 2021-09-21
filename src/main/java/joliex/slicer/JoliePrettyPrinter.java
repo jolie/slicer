@@ -118,6 +118,9 @@ import jolie.lang.parse.ast.expression.ProductExpressionNode;
 import jolie.lang.parse.ast.expression.SumExpressionNode;
 import jolie.lang.parse.ast.expression.VariableExpressionNode;
 import jolie.lang.parse.ast.expression.VoidExpressionNode;
+import jolie.lang.parse.ast.expression.InlineTreeExpressionNode.AssignmentOperation;
+import jolie.lang.parse.ast.expression.InlineTreeExpressionNode.DeepCopyOperation;
+import jolie.lang.parse.ast.expression.InlineTreeExpressionNode.PointsToOperation;
 import jolie.lang.parse.ast.types.TypeChoiceDefinition;
 import jolie.lang.parse.ast.types.TypeDefinition;
 import jolie.lang.parse.ast.types.TypeDefinitionLink;
@@ -498,7 +501,8 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 									isTopLevelTypeDeclaration = false;
 									aliasInfo.guardName().accept( this );
 									isTopLevelTypeDeclaration = backup;
-									_2.dot().append( aliasInfo.variablePath().toPrettyString() );
+									_2.dot();
+									aliasInfo.variablePath().accept( this );
 								},
 								PrettyPrinter::space );
 					},
@@ -602,13 +606,13 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 	@Override
 	public void visit( UndefStatement n ) {
 		pp.append( "undef" )
-			.spacedParens( asPPConsumer( PrettyPrinter::append, n.variablePath().toPrettyString() ) );
+			.spacedParens( _0 -> n.variablePath().accept( this ) );
 	}
 
 	@Override
 	public void visit( ValueVectorSizeExpressionNode n ) {
-		pp.append( "#" )
-			.append( n.variablePath().toPrettyString() );
+		pp.append( "#" );
+		n.variablePath().accept( this );
 	}
 
 	@Override
@@ -651,20 +655,22 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 	@Override
 	public void visit( ForEachSubNodeStatement n ) {
 		pp.append( "foreach" )
-			.spacedParens( _0 -> _0
-				.append( n.keyPath().toPrettyString() )
-				.surround( PrettyPrinter::space, PrettyPrinter::colon )
-				.append( n.targetPath().toPrettyString() ) )
+			.spacedParens( _0 -> {
+				n.keyPath().accept( this );
+				_0.surround( PrettyPrinter::space, PrettyPrinter::colon );
+				n.targetPath().accept( this ) ;
+			 } )
 			.newCodeBlock( _0 -> n.body().accept( this ) );
 	}
 
 	@Override
 	public void visit( ForEachArrayItemStatement n ) {
 		pp.append( "for" )
-			.spacedParens( _0 -> _0
-				.append( n.keyPath().toPrettyString() )
-				.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, "in" ) )
-				.append( n.targetPath().toPrettyString() ) )
+			.spacedParens( _0 -> {
+				n.keyPath().accept( this );
+				_0.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, "in" ) );
+				n.targetPath().accept( this );
+			} )
 			.newCodeBlock( _0 -> n.body().accept( this ) );
 	}
 
@@ -672,12 +678,12 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 	public void visit( SpawnStatement n ) {
 		pp.append( "spawn" )
 			.spacedParens( pp -> {
-				pp.append( n.indexVariablePath().toPrettyString() )
-					.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, "over" ) );
+				n.indexVariablePath().accept( this );
+				pp.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, "over" ) );
 				n.upperBoundExpression().accept( this );
 			} )
 			.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, "in" ) )
-			.append( n.inVariablePath().toPrettyString() )
+			.run( _0 -> n.inVariablePath().accept( this ) )
 			.space()
 			.newCodeBlock( _0 -> n.body().accept( this ) );
 	}
@@ -685,7 +691,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 	@Override
 	public void visit( IsTypeExpressionNode n ) {
 		pp.append( "is_" + n.type().name().toLowerCase() )
-			.spacedParens( asPPConsumer( PrettyPrinter::append, n.variablePath().toPrettyString() ) );
+			.spacedParens( _0 -> n.variablePath().accept( this ) );
 	}
 
 	@Override
@@ -743,8 +749,8 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( InstallFixedVariableExpressionNode n ) {
-		pp.append( '^' )
-			.append( n.variablePath().toPrettyString() );
+		pp.append( '^' );
+		n.variablePath().accept( this );
 	}
 
 	@Override
@@ -756,7 +762,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 					pp
 					.ifTrueOrElse(
 						node instanceof ConstantStringExpression,
-						asPPConsumer( PrettyPrinter::append, ( (ConstantStringExpression) node ).value() ),
+						pp1 -> pp1.append( ( (ConstantStringExpression) node ).value() ),
 						pp1 -> pp1.spacedParens( _0 -> node.accept( this ) ) )
 					.ifPresent(
 						Optional.ofNullable( element.value() ),
@@ -857,25 +863,24 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 				if( obj instanceof InterfaceOneWayBranch ) {
 					InterfaceOneWayBranch iface = (InterfaceOneWayBranch) obj;
 					pp.append( iface.interfaceDefinition.name() )
-						.spacedParens( asPPConsumer( PrettyPrinter::append, iface.inputVariablePath.toPrettyString() ) )
+						.spacedParens( _1 -> iface.inputVariablePath.accept( this ) )
 						.newCodeBlock( _1 -> iface.body.accept( this ) );
 				} else if( obj instanceof InterfaceRequestResponseBranch ) {
 					InterfaceRequestResponseBranch iface = (InterfaceRequestResponseBranch) obj;
 					pp.append( iface.interfaceDefinition.name() )
-						.spacedParens( asPPConsumer( PrettyPrinter::append, iface.inputVariablePath.toPrettyString() ) )
-						.spacedParens(
-							asPPConsumer( PrettyPrinter::append, iface.outputVariablePath.toPrettyString() ) )
+						.spacedParens( _1 -> iface.inputVariablePath.accept( this ) )
+						.spacedParens( _1 -> iface.outputVariablePath.accept( this ) )
 						.newCodeBlock( _1 -> iface.body.accept( this ) );
 				} else if( obj instanceof OperationOneWayBranch ) {
 					OperationOneWayBranch op = (OperationOneWayBranch) obj;
 					pp.append( op.operation )
-						.spacedParens( asPPConsumer( PrettyPrinter::append, op.inputVariablePath.toPrettyString() ) )
+						.spacedParens( _1 -> op.inputVariablePath.accept( this ) )
 						.newCodeBlock( _1 -> op.body.accept( this ) );
 				} else if( obj instanceof OperationRequestResponseBranch ) {
 					OperationRequestResponseBranch op = (OperationRequestResponseBranch) obj;
 					pp.append( op.operation )
-						.spacedParens( asPPConsumer( PrettyPrinter::append, op.inputVariablePath.toPrettyString() ) )
-						.spacedParens( asPPConsumer( PrettyPrinter::append, op.outputVariablePath.toPrettyString() ) )
+						.spacedParens( _1 -> op.inputVariablePath.accept( this ) )
+						.spacedParens( _1 -> op.outputVariablePath.accept( this ) )
 						.newCodeBlock( _1 -> op.body.accept( this ) );
 				}
 			},
@@ -902,14 +907,33 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( InlineTreeExpressionNode n ) {
-		// TODO Auto-generated method stub
-		assert false : "not implemented";
+		n.rootExpression().accept( this );
+		pp.newCodeBlock( _0 -> _0
+			.intercalate( 
+				Arrays.asList( n.operations() ), 
+				( operation, pp ) -> {
+					if( operation instanceof AssignmentOperation ) {
+						AssignmentOperation op = (AssignmentOperation) operation;
+						op.path().accept( this );
+						pp.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, "=" ) );
+						op.expression().accept( this ); 
+					} else if ( operation instanceof DeepCopyOperation ) {
+						DeepCopyOperation op = (DeepCopyOperation) operation;
+						op.path().accept( this );
+						pp.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, "<<" ) );
+						op.expression().accept( this ); 
+					} else if ( operation instanceof PointsToOperation ) {
+						PointsToOperation op = (PointsToOperation) operation;
+						op.path().accept( this );
+						pp.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, "->" ) );
+						op.target().accept( this ); 
+					}
+				},
+				PrettyPrinter::newline ) );
 	}
 
 	@Override
 	public void visit( VoidExpressionNode n ) {
-		// TODO Auto-generated method stub
-		assert false : "not implemented";
 	}
 
 	@Override
