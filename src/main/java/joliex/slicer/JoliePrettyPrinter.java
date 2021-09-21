@@ -519,13 +519,13 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 				.append( "location" )
 				.colon()
 				.space()
-				.surround( '"', asPPConsumer( PrettyPrinter::append, n.location().toString() ) )
+				.run( _1 -> n.location().accept( this ) )
 				.newline()
 				.onlyIf( n.protocol() != null, _1 -> _1
 					.append( "protocol" )
 					.colon()
 					.space()
-					.append( n.protocol().toString() )
+					.run( _2 -> n.protocol().accept( this ) )
 					.newline() )
 				.onlyIf( !n.getInterfaceList().isEmpty(), _1 -> _1
 					.append( "interfaces" )
@@ -562,13 +562,13 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 					.append( "location" )
 					.colon()
 					.space()
-					.surround( '"', asPPConsumer( PrettyPrinter::append, n.location().toString() ) )
+					.run( _2 -> n.location().accept( this ) )
 					.newline() )
 				.onlyIf( n.protocol() != null, _1 -> _1
 					.append( "protocol" )
 					.colon()
 					.space()
-					.append( n.protocol().toString() )
+					.run( _2 -> n.protocol().accept( this ) )
 					.newline() )
 				.onlyIf( !n.getInterfaceList().isEmpty(), _1 -> _1
 					.append( "interfaces" )
@@ -982,7 +982,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 			.append( n.name() )
 			.space()
 			.ifPresent( n.parameterConfiguration(), ( param, _0 ) -> _0
-				.parens( _1 -> _1
+				.spacedParens( _1 -> _1
 					.append( param.type().name() )
 					.space()
 					.colon()
