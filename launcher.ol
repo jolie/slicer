@@ -31,6 +31,7 @@ service Launcher {
 	embed File as file
 
 	main {
+		getServiceFileName@file()( slicer )
 		getRealServiceDirectory@file()( home )
 		getFileSeparator@file()( sep )
 
@@ -40,6 +41,6 @@ service Launcher {
 			service = "Main"
 		} )( wrapper.location )
 
-		run@wrapper( { args -> args } )()
+		run@wrapper( slicer { args -> args } )()
 	}
 }
