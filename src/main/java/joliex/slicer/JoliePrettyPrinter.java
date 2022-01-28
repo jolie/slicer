@@ -131,6 +131,7 @@ import jolie.util.Pair;
 public class JoliePrettyPrinter implements UnitOLVisitor {
 	final PrettyPrinter pp = new PrettyPrinter();
 	boolean isTopLevelTypeDeclaration = true;
+	boolean printOnlyLinkedTypeName = false;
 
 	public String toString() {
 		return pp.pp.toString();
@@ -795,9 +796,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 	@Override
 	public void visit( TypeDefinitionLink n ) {
 		pp.onlyIf( isTopLevelTypeDeclaration, pp -> pp.append( "type" ).space() )
-			.append( n.name() )
-			.colon()
-			.space()
+		    .onlyIf( !printOnlyLinkedTypeName, pp -> pp.append( n.name() ).colon().space() )
 			.append( n.linkedTypeName() );
 	}
 
@@ -955,10 +954,13 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 	public void visit( TypeChoiceDefinition n ) {
 		n.left().accept( this );
 		pp.space().append( '|' ).space();
-		boolean backup = isTopLevelTypeDeclaration;
+		boolean isTopLevelTypeDeclarationOld = isTopLevelTypeDeclaration;
+		boolean printOnlyLinkedTypeNameOld = printOnlyLinkedTypeName;
 		isTopLevelTypeDeclaration = false;
+		printOnlyLinkedTypeName = true;
 		n.right().accept( this );
-		isTopLevelTypeDeclaration = backup;
+		isTopLevelTypeDeclaration = isTopLevelTypeDeclarationOld;
+		printOnlyLinkedTypeNameOld = printOnlyLinkedTypeNameOld;
 	}
 
 	@Override
