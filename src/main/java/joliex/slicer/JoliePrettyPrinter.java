@@ -126,6 +126,7 @@ import jolie.lang.parse.ast.types.TypeDefinition;
 import jolie.lang.parse.ast.types.TypeDefinitionLink;
 import jolie.lang.parse.ast.types.TypeInlineDefinition;
 import jolie.util.Pair;
+import jolie.util.Range;
 
 
 public class JoliePrettyPrinter implements UnitOLVisitor {
@@ -208,6 +209,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 	public void visit( NotificationOperationStatement n ) {
 		pp.append( n.id() )
 			.append( '@' )
+			.append( n.outputPortId() )
 			.spacedParens( _0 -> n.outputExpression().accept( this ) );
 	}
 
@@ -426,7 +428,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( VariableExpressionNode n ) {
-		pp.append( n.toString() );
+		n.variablePath().accept( this );
 	}
 
 	@Override
@@ -776,6 +778,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 	public void visit( TypeInlineDefinition n ) {
 		pp.onlyIf( isTopLevelTypeDeclaration, pp -> pp.append( "type" ).space() )
 			.append( n.name() )
+			.run( _0 -> printTypeCardinality( n.cardinality() ) )
 			.colon()
 			.space()
 			.append( n.basicType().nativeType().id() )
@@ -796,8 +799,30 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 	@Override
 	public void visit( TypeDefinitionLink n ) {
 		pp.onlyIf( isTopLevelTypeDeclaration, pp -> pp.append( "type" ).space() )
-		    .onlyIf( !printOnlyLinkedTypeName, pp -> pp.append( n.name() ).colon().space() )
+		    .onlyIf( !printOnlyLinkedTypeName, pp -> pp
+				.append( n.name() )
+				.run( _0 -> printTypeCardinality( n.cardinality() ) )
+				.colon()
+				.space() )
 			.append( n.linkedTypeName() );
+	}
+
+	private void printTypeCardinality( Range r ) {
+		if( Constants.RANGE_ONE_TO_ONE.equals(r) )
+			return;
+
+		if( r.max() == 1 ) { // min cannot be 1 here, so it must be 0
+			pp.append('?');
+		} else if ( r.min() == 0 && r.max() == Integer.MAX_VALUE ) {
+			pp.append('*');
+		} else {
+			pp.brackets( _0 -> _0
+				.append( r.min() )
+				.comma()
+				.ifTrueOrElse( r.max() == Integer.MAX_VALUE, 
+					asPPConsumer( PrettyPrinter::append, '*'),
+					asPPConsumer( PrettyPrinter::append, r.max() ) ) );
+		}
 	}
 
 	@Override
@@ -810,21 +835,24 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 				Stream< OperationDeclaration > s = n.operationsMap().values().stream();
 				Map< Boolean, List< OperationDeclaration > > operations =
 					s.collect( Collectors.partitioningBy( op -> op instanceof OneWayOperationDeclaration ) );
+				List< OperationDeclaration > oneWayOperations = operations.get( true );
+				List< OperationDeclaration > requestResponseOperations = operations.get( false );
 				pp
-					.onlyIf( !operations.get( true ).isEmpty(), _0 -> _0
+					.onlyIf( !oneWayOperations.isEmpty(), _0 -> _0
 						.append( "OneWay" )
 						.colon()
 						.nest( _1 -> _1
 							.newline()
-							.intercalate( operations.get( true ),
+							.intercalate( oneWayOperations,
 								( opDecl, _2 ) -> opDecl.accept( this ),
-								_2 -> _2.comma().newline() ) ) )
-					.onlyIf( !operations.get( false ).isEmpty(), _0 -> _0
+								_2 -> _2.comma().newline() ) )
+						.onlyIf( !requestResponseOperations.isEmpty(), PrettyPrinter::newline ) )
+					.onlyIf( !requestResponseOperations.isEmpty(), _0 -> _0
 						.append( "RequestResponse" )
 						.colon()
 						.nest( _1 -> _1
 							.newline()
-							.intercalate( operations.get( false ),
+							.intercalate( requestResponseOperations,
 								( opDecl, _2 ) -> opDecl.accept( this ),
 								_2 -> _2.comma().newline() ) ) );
 			} );
@@ -954,13 +982,13 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 	public void visit( TypeChoiceDefinition n ) {
 		n.left().accept( this );
 		pp.space().append( '|' ).space();
-		boolean isTopLevelTypeDeclarationOld = isTopLevelTypeDeclaration;
-		boolean printOnlyLinkedTypeNameOld = printOnlyLinkedTypeName;
+		boolean _isTopLevelTypeDeclaration = isTopLevelTypeDeclaration;
+		boolean _printOnlyLinkedTypeName = printOnlyLinkedTypeName;
 		isTopLevelTypeDeclaration = false;
 		printOnlyLinkedTypeName = true;
 		n.right().accept( this );
-		isTopLevelTypeDeclaration = isTopLevelTypeDeclarationOld;
-		printOnlyLinkedTypeNameOld = printOnlyLinkedTypeNameOld;
+		isTopLevelTypeDeclaration = _isTopLevelTypeDeclaration;
+		printOnlyLinkedTypeName = _printOnlyLinkedTypeName;
 	}
 
 	@Override
