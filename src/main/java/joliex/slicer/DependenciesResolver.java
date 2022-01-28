@@ -97,7 +97,7 @@ public class DependenciesResolver implements OLVisitor< Unit, Set< OLSyntaxNode 
 			result.add( rr.requestType() );
 		}
 		if( declDependencies.containsKey( rr.responseType() ) ) {
-			result.add( rr.requestType() );
+			result.add( rr.responseType() );
 		}
 		result.addAll( rr.requestType().accept( this ) );
 		result.addAll( rr.responseType().accept( this ) );
@@ -498,6 +498,7 @@ public class DependenciesResolver implements OLVisitor< Unit, Set< OLSyntaxNode 
 					if( decl instanceof InterfaceDefinition
 						&& ((InterfaceDefinition) decl).name().equals( n.name() ) ) {
 						actualDefinition = (InterfaceDefinition) decl;
+						break;
 					}
 				}
 				assert actualDefinition != null;
