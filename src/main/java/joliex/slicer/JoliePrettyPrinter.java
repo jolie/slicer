@@ -777,10 +777,11 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 	@Override
 	public void visit( TypeInlineDefinition n ) {
 		pp.onlyIf( isTopLevelTypeDeclaration, pp -> pp.append( "type" ).space() )
-			.append( n.name() )
-			.run( _0 -> printTypeCardinality( n.cardinality() ) )
-			.colon()
-			.space()
+			.onlyIf( !printOnlyLinkedTypeName, pp -> pp
+				.append( n.name() )
+				.run( _0 -> printTypeCardinality( n.cardinality() ) )
+				.colon()
+				.space() )
 			.append( n.basicType().nativeType().id() )
 			.onlyIf( n.subTypes() != null && !n.subTypes().isEmpty(), _0 -> _0
 				.space()
@@ -1013,11 +1014,11 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 			.space()
 			.ifPresent( n.parameterConfiguration(), ( param, _0 ) -> _0
 				.spacedParens( _1 -> _1
-					.append( param.type().name() )
+					.append( param.variablePath() )
 					.space()
 					.colon()
 					.space()
-					.append( param.variablePath() ) ) )
+					.append( param.type().name() ) ) )
 			.newCodeBlock( _0 -> n.program().accept( this ) );
 	}
 
