@@ -582,7 +582,9 @@ public class DependenciesResolver implements OLVisitor< Unit, Set< OLSyntaxNode 
 		} else {
 			// The service name is not imported. It refers to a ServiceNode declared in this program
 			assert declDependencies.containsKey( n.service() );
-			return n.service().accept( this );
+			Set< OLSyntaxNode > dependencies = new HashSet<>( n.service().accept( this ) );
+			dependencies.add( n.service() );
+			return dependencies;
 		}
 	}
 }
