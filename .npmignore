@@ -1,0 +1,9 @@
+lib/
+target/
+.settings/
+.classpath
+.project
+src/
+.vscode/
+.idea/
+.java-version
