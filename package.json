@@ -1,0 +1,21 @@
+{
+  "version": "0.1.2",
+  "repo": "https://github.com/jolie/slicer",
+	"name": "@jolie/slicer",
+	"description": "A slicer for Jolie modules",
+	"author": [
+    {
+	    "name": "Valentino Picotti"
+    },
+    {
+		  "name": "Fabrizio Montesi",
+		  "email": "famontesi@gmail.com",
+	    "url": "https://www.fabriziomontesi.com"
+		}
+	],
+	"bin": {
+		"jolieslicer": "./launcher.ol"
+	},
+	"license": "LGPL 2.1",
+	"keywords": ["jolie","microservices"]
+}
