@@ -23,13 +23,9 @@ package joliex.slicer;
 import jolie.Interpreter;
 import jolie.cli.CommandLineException;
 import jolie.cli.CommandLineParser;
-import jolie.lang.CodeCheckingException;
-import jolie.lang.parse.OLParser;
-import jolie.lang.parse.ParserException;
-import jolie.lang.parse.Scanner;
+import jolie.lang.CodeCheckException;
 import jolie.lang.parse.SemanticVerifier;
 import jolie.lang.parse.ast.Program;
-import jolie.lang.parse.module.ModuleException;
 import jolie.lang.parse.util.ParsingUtils;
 import jolie.runtime.FaultException;
 import jolie.runtime.JavaService;
@@ -37,12 +33,8 @@ import jolie.runtime.Value;
 import jolie.runtime.embedding.RequestResponse;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.stream.Stream;
 
 
 public class JolieSlicer extends JavaService {
@@ -114,7 +106,7 @@ public class JolieSlicer extends JavaService {
 
             slicer.generateServiceDirectories();
 
-        } catch ( ParserException | InvalidConfigurationFileException | CodeCheckingException | ModuleException | CommandLineException | IOException e ) {
+        } catch ( CommandLineException | InvalidConfigurationFileException | CodeCheckException | IOException e ) {
             throw new FaultException( e.getClass().getSimpleName(), e );
         }
     }

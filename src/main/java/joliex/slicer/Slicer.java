@@ -137,7 +137,7 @@ public class Slicer {
 				List< OLSyntaxNode > newProgram =
 					dependenciesResolver.getServiceDependencies( s )
 						.stream()
-						.sorted( Comparator.comparing( dep -> dep.context().line() ) )
+						.sorted( Comparator.<OLSyntaxNode, Integer>comparing( dep -> dep.context().startLine() ) )
 						.collect( Collectors.toList() );
 				newProgram.add( s );
 				slices.put( s.name(), new Program( program.context(), newProgram ) );

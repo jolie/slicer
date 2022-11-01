@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>joliex</groupId>
 	<artifactId>jolieslicer</artifactId>
@@ -11,7 +12,8 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.source>11</maven.compiler.source>
 		<maven.compiler.target>11</maven.compiler.target>
-		<jolie.version>1.10.6-git</jolie.version>
+		<jolie.version>1.11.0-git</jolie.version>
+		<outDir>lib</outDir>
 	</properties>
 	<packaging>jar</packaging>
 	<build>
@@ -61,28 +63,31 @@
 		</pluginManagement>
 		<plugins>
 			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-dependency-plugin</artifactId>
-				<version>3.1.1</version>
+				<artifactId>maven-assembly-plugin</artifactId>
 				<executions>
 					<execution>
-						<id>copy-installed</id>
-						<phase>install</phase>
+						<phase>package</phase>
 						<goals>
-							<goal>copy</goal>
+							<goal>single</goal>
 						</goals>
-						<configuration>
-							<artifactItems>
-								<artifactItem>
-									<groupId>${project.groupId}</groupId>
-									<artifactId>${project.artifactId}</artifactId>
-									<version>${project.version}</version>
-									<type>jar</type>
-									<destFileName>${project.artifactId}-${project.version}.jar</destFileName>
-								</artifactItem>
-							</artifactItems>
-							<outputDirectory>dist</outputDirectory>
-						</configuration>
+					</execution>
+				</executions>
+				<configuration>
+					<finalName>${project.artifactId}</finalName>
+					<outputDirectory>${outDir}</outputDirectory>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+					<appendAssemblyId>false</appendAssemblyId>
+				</configuration>
+			</plugin>
+			<plugin>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>3.0.2</version>
+				<executions>
+					<execution>
+						<id>default-jar</id>
+						<phase>none</phase>
 					</execution>
 				</executions>
 			</plugin>
@@ -93,21 +98,25 @@
 			<groupId>org.jolie-lang</groupId>
 			<artifactId>jolie</artifactId>
 			<version>${jolie.version}</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.jolie-lang</groupId>
 			<artifactId>libjolie</artifactId>
 			<version>${jolie.version}</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.jolie-lang</groupId>
 			<artifactId>jolie-js</artifactId>
 			<version>${jolie.version}</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.jolie-lang</groupId>
 			<artifactId>jolie-cli</artifactId>
 			<version>${jolie.version}</version>
+			<scope>provided</scope>
 		</dependency>
 	</dependencies>
 </project>

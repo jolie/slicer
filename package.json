@@ -1,21 +1,38 @@
 {
-  "version": "0.1.2",
+  "version": "0.1.5",
   "repo": "https://github.com/jolie/slicer",
-	"name": "@jolie/slicer",
-	"description": "A slicer for Jolie modules",
-	"author": [
+  "name": "@jolie/slicer",
+  "description": "A slicer for Jolie modules",
+  "author": {
+    "name": "Valentino Picotti"
+  },
+  "contributors": [
     {
-	    "name": "Valentino Picotti"
-    },
-    {
-		  "name": "Fabrizio Montesi",
-		  "email": "famontesi@gmail.com",
-	    "url": "https://www.fabriziomontesi.com"
-		}
-	],
-	"bin": {
-		"jolieslicer": "./launcher.ol"
-	},
-	"license": "LGPL 2.1",
-	"keywords": ["jolie","microservices"]
+      "name": "Fabrizio Montesi",
+      "email": "famontesi@gmail.com",
+      "url": "https://www.fabriziomontesi.com"
+    }
+  ],
+  "bin": {
+    "jolieslicer": "./launcher.ol"
+  },
+  "scripts": {
+    "prepack": "npx --package=@jolie/jpm -- jpm hooks:prepack",
+    "postpublish": "shx rm -rf lib"
+  },
+  "license": "LGPL 2.1",
+  "keywords": [
+    "jolie",
+    "microservices"
+  ],
+  "jolie": {
+    "dependencies": {},
+    "maven": {
+      "dependencies": {},
+      "indirectDependencies": {}
+    }
+  },
+  "dependencies": {
+    "shx": "^0.3.4"
+  }
 }
