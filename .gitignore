@@ -177,3 +177,8 @@ hs_err_pid*
 .ionide
 
 # End of https://www.toptal.com/developers/gitignore/api/java,intellij+iml,visualstudiocode,emacs
+
+lib/
+target/
+node_modules/
+.vscode/

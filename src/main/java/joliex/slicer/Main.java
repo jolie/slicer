@@ -26,11 +26,9 @@ import java.util.Map;
 import jolie.Interpreter;
 import jolie.JolieURLStreamHandlerFactory;
 import jolie.cli.CommandLineException;
-import jolie.lang.CodeCheckingException;
-import jolie.lang.parse.ParserException;
+import jolie.lang.CodeCheckException;
 import jolie.lang.parse.SemanticVerifier;
 import jolie.lang.parse.ast.Program;
-import jolie.lang.parse.module.ModuleException;
 import jolie.lang.parse.util.ParsingUtils;
 
 /**
@@ -88,7 +86,7 @@ public class Main {
 
 		} catch( CommandLineException | InvalidConfigurationFileException e ) {
 			System.out.println( e.getMessage() );
-		} catch( IOException | ParserException | CodeCheckingException | ModuleException e ) {
+		} catch( IOException | CodeCheckException e ) {
 			e.printStackTrace();
 		}
 	}

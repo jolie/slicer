@@ -109,12 +109,14 @@ import jolie.lang.parse.ast.expression.ConstantIntegerExpression;
 import jolie.lang.parse.ast.expression.ConstantLongExpression;
 import jolie.lang.parse.ast.expression.ConstantStringExpression;
 import jolie.lang.parse.ast.expression.FreshValueExpressionNode;
+import jolie.lang.parse.ast.expression.IfExpressionNode;
 import jolie.lang.parse.ast.expression.InlineTreeExpressionNode;
 import jolie.lang.parse.ast.expression.InstanceOfExpressionNode;
 import jolie.lang.parse.ast.expression.IsTypeExpressionNode;
 import jolie.lang.parse.ast.expression.NotExpressionNode;
 import jolie.lang.parse.ast.expression.OrConditionNode;
 import jolie.lang.parse.ast.expression.ProductExpressionNode;
+import jolie.lang.parse.ast.expression.SolicitResponseExpressionNode;
 import jolie.lang.parse.ast.expression.SumExpressionNode;
 import jolie.lang.parse.ast.expression.VariableExpressionNode;
 import jolie.lang.parse.ast.expression.VoidExpressionNode;
@@ -758,7 +760,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( VariablePathNode n ) {
-		pp.onlyIf( n.isGlobal(), _0 -> _0.append( Constants.GLOBAL ).dot() )
+		pp.onlyIf( n.isGlobal(), _0 -> _0.append( "global" ).dot() )
 			.intercalate( n.path(),
 				(element, pp) -> {
 					OLSyntaxNode node = element.key();
@@ -789,7 +791,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 					boolean previousValue = isTopLevelTypeDeclaration;
 					isTopLevelTypeDeclaration = false;
 					List< Map.Entry< String, TypeDefinition > > subTypes = new ArrayList<>( n.subTypes() );
-					subTypes.sort( Comparator.comparing( entry -> entry.getValue().context().line() ) );
+					subTypes.sort( Comparator.<Map.Entry< String, TypeDefinition >,Integer>comparing( entry -> entry.getValue().context().startLine()) );
 					pp.intercalate( subTypes,
 						( entry, _1 ) -> entry.getValue().accept( this ),
 						PrettyPrinter::newline );
@@ -1262,5 +1264,27 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 			pp.append( '}' );
 			return this;
 		}
+	}
+
+	@Override
+	public void visit(SolicitResponseExpressionNode n) {
+		pp.append( n.id() )
+			.append( "@" )
+			.append( n.outputPortId() )
+			.spacedParens( _0 -> _0
+				.ifPresent( Optional.ofNullable( n.outputExpression() ),
+					( outExpre, _1 ) -> outExpre.accept( this ) ) );
+	}
+
+	@Override
+	public void visit(IfExpressionNode n) {
+		pp.append("if")
+			.spacedParens( _1 -> n.guard().accept(this));
+		n.thenExpression().accept(this);
+		pp.ifPresent(
+			Optional.ofNullable( n.elseExpression() ),
+			( proc, _0 ) -> _0
+				.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, "else" ) )
+				.newCodeBlock( _1 -> proc.accept( this ) ) );
 	}
 }

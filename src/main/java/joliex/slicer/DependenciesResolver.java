@@ -587,4 +587,14 @@ public class DependenciesResolver implements OLVisitor< Unit, Set< OLSyntaxNode 
 			return dependencies;
 		}
 	}
+
+	@Override
+	public Set<OLSyntaxNode> visit(SolicitResponseExpressionNode n, Unit ctx) {
+		return new HashSet<>();
+	}
+
+	@Override
+	public Set<OLSyntaxNode> visit(IfExpressionNode n, Unit ctx) {
+		return new HashSet<>();
+	}
 }
