@@ -21,7 +21,6 @@
 
 from runtime import Runtime
 from file import File
-
 service Launcher {
 	outputPort wrapper {
 		RequestResponse: run
@@ -35,7 +34,7 @@ service Launcher {
 		getRealServiceDirectory@file()( home )
 		getFileSeparator@file()( sep )
 
-		loadLibrary@runtime( home + sep + "lib" + sep + "jolieslicer-0.1.0.jar" )()
+		loadLibrary@runtime( home + sep + "lib" + sep + "jolieslicer.jar" )()
 		loadEmbeddedService@runtime( {
 			filepath = home + sep + "main.ol"
 			service = "Main"
