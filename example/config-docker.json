@@ -1,0 +1,11 @@
+{
+    "CommandSide": {
+        "location" : "socket://localhost:10000"
+    },
+    "QuerySide": {
+        "location" : "socket://localhost:10001"
+    },
+    "EventStore": {
+        "location" : "socket://localhost:10002"
+    }
+}
