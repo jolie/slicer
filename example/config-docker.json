@@ -7,5 +7,10 @@
     },
     "EventStore": {
         "location" : "socket://localhost:10002"
+    },
+    "Test": {
+        "location" : "socket://localhost:10003",
+        "docker": true,
+        "debug" : true
     }
 }
