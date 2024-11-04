@@ -9,6 +9,7 @@
         "location" : "local://ES"
     },
     "Test": {
-        "location" : "local://test"
+        "location" : "local://test",
+        "debug" : true
     }
 }
