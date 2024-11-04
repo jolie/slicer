@@ -85,6 +85,8 @@ service CommandSide( config : undefined ) {
     embed Console as C
     embed StringUtils as S
 
+    init { global.debug = config.CommandSide.debug }
+
     main {
         [ createParkingArea( pa )( id )
           {
@@ -97,8 +99,10 @@ service CommandSide( config : undefined ) {
               }
           }
         ] {
-              valueToPrettyString@S( pa )( str )
-              println@C( "UPDATED: " + str )()
+              if( global.debug ){
+                  valueToPrettyString@S( pa )( str )
+                  println@C( "UPDATED: " + str )()
+              }
               synchronized( dbToken ) {
                   event.type = "PA_CREATED"
                   event << global.db[id]
@@ -118,8 +122,10 @@ service CommandSide( config : undefined ) {
         ] {
               event.type = "PA_UPDATED";
               event << pa
-              valueToPrettyString@S( pa )( str )
-              println@C( "UPDATED: " + str )()
+              if( global.debug ){
+                  valueToPrettyString@S( pa )( str )
+                  println@C( "UPDATED: " + str )()
+              }
               publishEvent@EventStore( event )
         }
         [ deleteParkingArea( id )( r ){
@@ -186,21 +192,24 @@ service QuerySide( config : undefined ) {
         interfaces: EventStoreInterface
     }
 
-    embed Runtime as Runtime
+    // embed Runtime as Runtime
     // embed EventStore in EventStore
     embed Console as C
     embed StringUtils as S
 
     init {
         // getLocalLocation@Runtime()( subscriber.location )
+        global.debug = config.QuerySide.debug
         subscriber.location = config.QuerySide.location
         pushBackTopic -> subscriber.topics[#subscriber.topics]
         pushBackTopic = "PA_CREATED"
         pushBackTopic = "PA_UPDATED"
         pushBackTopic = "PA_DELETED"
 
-        valueToPrettyString@S( subscriber )( str )
-        println@C( str )()
+        if( global.debug ){
+            valueToPrettyString@S( subscriber )( str )
+            println@C( str )()
+        }
         
         subscribe@EventStore( subscriber )( res )
 
@@ -239,8 +248,10 @@ service QuerySide( config : undefined ) {
             }
         } ] { nullProcess }
         [ notify( event ) ] {
-            valueToPrettyString@S( event )( str )
-            println@C( "Notified of: " + str)()
+            if( global.debug ) {
+                valueToPrettyString@S( event )( str )
+                println@C( "Notified of: " + str)()
+            }
             type -> event.type
             if ( type == "PA_CREATED" || type == "PA_UPDATED" ) {
                 synchronized( dbToken ) {
@@ -291,31 +302,38 @@ service EventStore( config : undefined ) {
         location: config.EventStore.location
         protocol: http { format = "json" } 
         interfaces:
-            EventStoreInterface,
-            ShutDownInterface
+            EventStoreInterface, ShutDownInterface
     }
 
     embed Console as C
     embed StringUtils as S
 
+    init { global.debug = config.EventStore.debug }
+
     main {
         [ subscribe( subscriber )( response ) {
-            valueToPrettyString@S( subscriber )( str )
-            println@C( "Subscription: " + str )()
+            if( global.debug ) {
+                valueToPrettyString@S( subscriber )( str )
+                println@C( "Subscription: " + str )()
+            }
             for( topic in subscriber.topics ) {
                 loc = subscriber.location
                 thisTopic -> global.topics.( topic )
-                thisTopic.subscribers.( loc ) = loc
-                for ( ev in thisTopic.events ) {
+                synchronized( subscriberLocation ) {
+                    thisTopic.subscribers.( loc ) = loc
+                }
+                /* for ( ev in thisTopic.events ) {
                     synchronized( subscriberLocation ) {
                         Subscriber.location = subscriber.location
                         notify@Subscriber( ev )
                     }
-                }
+                } */
             }
-            valueToPrettyString@S( global.topics )( str )
-            println@C( "State of topics variable: " )()
-            println@C( str )()
+            if( global.debug ) {
+                valueToPrettyString@S( global.topics )( str )
+                println@C( "State of topics variable: " )()
+                println@C( str )()
+            }
             response = "OK"
         } ] { nullProcess }
         [ unsubscribe( subscriber )( response ) {
@@ -325,15 +343,19 @@ service EventStore( config : undefined ) {
             }
         } ] { nullProcess }
         [ publishEvent( event ) ] {
-            valueToPrettyString@S( event )( str )
-            println@C( "Received event " + str )()
+            if( global.debug ) {
+                valueToPrettyString@S( event )( str )
+                println@C( "Received event " + str )()
+            }
             eventsArray -> global.topics.( event.type ).events
             synchronized( dbEvents ) {
                 pushBack -> eventsArray[#eventsArray]
                 pushBack << event
             }
-            valueToPrettyString@S( eventsArray )( str )
-            println@C( "Events Array: " + str )()
+            if( global.debug ) {
+                valueToPrettyString@S( eventsArray )( str )
+                println@C( "Events Array: " + str )()
+            }
             subscribersMap -> global.topics.( event.type ).subscribers
             foreach( subscriber : subscribersMap ) {
                 synchronized( subscriberLocation ) {
@@ -345,7 +367,7 @@ service EventStore( config : undefined ) {
         [ shutDown( void ) ]{
               println@C( "Shutting down" )()
               exit
-          }
+        }
     }
 }
 
@@ -376,9 +398,12 @@ service Test( config: undefined ) {
     }
 
     embed Time as time
-    embed EventStore(config) in EventStore
-    embed CommandSide(config) in CommandSide
-    embed QuerySide(config) in QuerySide
+    embed Console as console
+    embed StringUtils as su
+    embed Runtime as runtime
+    // embed EventStore(config) in EventStore
+    // embed CommandSide(config) in CommandSide
+    // embed QuerySide(config) in QuerySide
 
     inputPort ip {
         location: config.Test.location
@@ -387,25 +412,73 @@ service Test( config: undefined ) {
             NotificationInterface
     }
 
+    define printLoading {
+        for(i=0,i<3,i++){sleep@time(200)();print@console(". ")()}
+        sleep@time(200)()
+        println@console( "done!" )()
+    }
+
+    init {
+        global.debug = config.Test.debug
+        if(!is_defined(config.Test.docker) || !config.Test.docker) {
+            dependencies[0] << { service = "EventStore" filepath="monolith.ol" params -> config }
+            dependencies[1] << { service = "CommandSide" filepath="monolith.ol" params -> config}
+            // dependencies[2] << { service = "QuerySide" filepath="monolith.ol" params -> config}
+            println@console( "---- EMBEDDING DEPENDENCIES ----" )()
+            for( service in dependencies ) {
+                print@console( "Embedding " + service.service + ": " )()
+                loadEmbeddedService@runtime( service )()
+                printLoading
+            }
+        }
+    }
+
     main {
         sleep@time( 1000 )()
-        subscribe@EventStore( {
+        subscription << {
             location = config.Test.location
             topics[0] = "PA_CREATED"
             topics[1] = "PA_DELETED"
-        } )( res )
+        }
+        if( global.debug ){
+            println@console( "Subscribing as:" )()
+            valueToPrettyString@su( subscription )( dbg )
+            println@console( dbg )()
+        }
+        subscribe@EventStore( subscription )( res )
         parkingArea << {
             name = "PA_123"
             chargingSpeed = "FAST"
             availability[0] << { start = 8 end = 13 }
         }
+        if( global.debug ){
+            println@console( "Creating Parking Area:" )()
+            valueToPrettyString@su( parkingArea )( dbg )
+            println@console( dbg )()
+        }
         createParkingArea@CommandSide( parkingArea )( paid )
         notify( event )
+        if( global.debug ){
+            println@console( "Received Event:" )()
+            valueToPrettyString@su( event )( dbg )
+            println@console( dbg )()
+        }
         if( event.type != "PA_CREATED" || event.id != paid )
             throw( AssertionFailed )
+
+        if( global.debug ){
+            println@console( "Deleting Parking Area with ID: " + paid )()
+        }
         deleteParkingArea@CommandSide( paid )()
         notify( event )
+        if( global.debug ){
+            println@console( "Received Event:" )()
+            valueToPrettyString@su( event )( dbg )
+            println@console( dbg )()
+        }
         if( event.type != "PA_DELETED" || event.id != paid )
             throw( AssertionFailed )
+
+        println@console( "Test passed." )()
     }
 }
