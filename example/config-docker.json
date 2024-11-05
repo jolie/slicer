@@ -3,7 +3,9 @@
         "location" : "socket://localhost:10000"
     },
     "QuerySide": {
-        "location" : "socket://localhost:10001"
+        "location" : "socket://localhost:10001",
+        "docker": true,
+        "debug": true
     },
     "EventStore": {
         "location" : "socket://localhost:10002"
