@@ -196,10 +196,15 @@ service QuerySide( config : undefined ) {
     // embed EventStore in EventStore
     embed Console as C
     embed StringUtils as S
+    embed Time as T
 
     init {
         // getLocalLocation@Runtime()( subscriber.location )
         global.debug = config.QuerySide.debug
+        if( is_defined( config.QuerySide.docker ) && config.QuerySide.docker ) {
+            replaceAll@su( config.QuerySide.location{regex = "localhost" replacement = "queryside"} )
+                         ( config.QuerySide.location )
+        }
         subscriber.location = config.QuerySide.location
         pushBackTopic -> subscriber.topics[#subscriber.topics]
         pushBackTopic = "PA_CREATED"
@@ -210,7 +215,8 @@ service QuerySide( config : undefined ) {
             valueToPrettyString@S( subscriber )( str )
             println@C( str )()
         }
-        
+
+        sleep@T( 1000 )()
         subscribe@EventStore( subscriber )( res )
 
         println@C( "Queryside subscription: " + res )()
@@ -430,6 +436,9 @@ service Test( config: undefined ) {
                 loadEmbeddedService@runtime( service )()
                 printLoading
             }
+		    } else {
+          replaceAll@su( config.Test.location {regex = "localhost" replacement = "test" } )
+                       ( config.Test.location )
         }
     }
 
