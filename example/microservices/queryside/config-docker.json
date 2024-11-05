@@ -1,0 +1,18 @@
+{
+    "CommandSide": {
+        "location" : "socket://commandside:10000"
+    },
+    "QuerySide": {
+        "location" : "socket://localhost:10001",
+        "debug": true,
+        "docker": true
+    },
+    "EventStore": {
+        "location" : "socket://eventstore:10002"
+    },
+    "Test": {
+        "location" : "socket://test:10003",
+        "docker": true,
+        "debug" : true
+    }
+}

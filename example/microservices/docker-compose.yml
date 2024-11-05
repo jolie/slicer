@@ -1,0 +1,14 @@
+version: "3.9"
+services:
+  queryside:
+    build: ./queryside
+    platform: linux/amd64
+  commandside:
+    build: ./commandside
+    platform: linux/amd64
+  eventstore:
+    build: ./eventstore
+    platform: linux/amd64
+  test:
+    build: ./test
+    platform: linux/amd64
