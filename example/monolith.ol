@@ -202,7 +202,7 @@ service QuerySide( config : undefined ) {
         // getLocalLocation@Runtime()( subscriber.location )
         global.debug = config.QuerySide.debug
         if( is_defined( config.QuerySide.docker ) && config.QuerySide.docker ) {
-            replaceAll@su( config.QuerySide.location{regex = "localhost" replacement = "queryside"} )
+            replaceAll@S( config.QuerySide.location{regex = "localhost" replacement = "queryside"} )
                          ( config.QuerySide.location )
         }
         subscriber.location = config.QuerySide.location
@@ -378,7 +378,7 @@ service EventStore( config : undefined ) {
 }
 
 service Test( config: undefined ) {
-
+    execution: single
     outputPort EventStore {
         location: config.EventStore.location
         protocol: http { format = "json" } 
