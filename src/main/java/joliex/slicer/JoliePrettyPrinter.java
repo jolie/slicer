@@ -33,6 +33,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import jolie.lang.Constants;
+import jolie.lang.Keywords;
 import jolie.lang.parse.UnitOLVisitor;
 import jolie.lang.parse.ast.AddAssignStatement;
 import jolie.lang.parse.ast.AssignStatement;
@@ -163,7 +164,9 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( DefinitionNode n ) {
-		pp.append( n.id() )
+		pp.onlyIf( !n.id().equals(Keywords.MAIN) && !n.id().equals(Keywords.INIT),
+						_0 -> _0.append( Keywords.DEFINE ).space() )
+			.append( n.id() )
 			.space()
 			.newCodeBlock( _0 -> n.body().accept( this ) );
 	}
