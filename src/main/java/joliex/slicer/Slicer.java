@@ -24,10 +24,7 @@ import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static java.nio.file.StandardOpenOption.WRITE;
 
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -42,6 +39,7 @@ import jolie.lang.parse.ast.EmbedServiceNode;
 import jolie.lang.parse.ast.OLSyntaxNode;
 import jolie.lang.parse.ast.Program;
 import jolie.lang.parse.ast.ServiceNode;
+import org.json.simple.parser.ParseException;
 
 /**
  * Slicer
@@ -54,8 +52,10 @@ public class Slicer {
 	final DependenciesResolver dependenciesResolver;
 	Map< String, Program > slices = null;
 
-	static final String DOCKERFILE_FILENAME = "Dockerfile";
-	static final String DOCKERCOMPOSE_FILENAME = "docker-compose.yml";
+	private static final String DOCKERFILE_FILENAME = "Dockerfile";
+	private static final String DOCKERCOMPOSE_FILENAME = "docker-compose.yml";
+	private static final String CONFIG_LOCATION_KEY = "location";
+	private static final String CONFIG_LOCATION_LOCALHOST = "localhost" ;
 
 	private Slicer( Program p, Path configPath, Path outputDirectory )
 		throws FileNotFoundException, InvalidConfigurationFileException {
@@ -167,6 +167,8 @@ public class Slicer {
 			// Copy configuration file
 			Path newConfigPath = serviceDir.resolve( configPath.getFileName() );
 			Files.copy( configPath, newConfigPath, StandardCopyOption.REPLACE_EXISTING );
+			System.out.println( newConfigPath.toString() );
+			makeConfigLocalToService( newConfigPath, service.getKey() );
 			// Output Jolie
 			Path jolieFilePath = serviceDir.resolve( service.getKey() + ".ol" );
 			try( OutputStream os =
@@ -195,14 +197,42 @@ public class Slicer {
 		}
 	}
 
+	private void makeConfigLocalToService( Path dockerServiceConfig, String serviceName ) throws IOException {
+        FileReader configReader = new FileReader( dockerServiceConfig.toFile() );
+		JSONObject globalConfig = null;
+        try {
+            globalConfig = (JSONObject) JSONValue.parseWithException( configReader );
+        } catch (ParseException e) {
+            throw new RuntimeException(e);
+        }
+        globalConfig.replaceAll( ( serviceKey, serviceConfig ) -> {
+        	if ( serviceName.equals(serviceKey) ) {
+				return serviceConfig;
+			}
+			String newLocation = ((String) ((JSONObject) serviceConfig).get(CONFIG_LOCATION_KEY))
+					.replace( CONFIG_LOCATION_LOCALHOST, ((String) serviceKey).toLowerCase() );
+			((HashMap<String, Object>) serviceConfig).replace( CONFIG_LOCATION_KEY, newLocation);
+            return serviceConfig;
+        } );
+		configReader.close();
+		System.out.println( globalConfig.toJSONString() );
+		try( FileWriter fw = new FileWriter( dockerServiceConfig.toFile() ) ) {
+			fw.write( globalConfig.toJSONString()
+					.replace( "\\/", "/")
+					.replaceAll( "([{},\\[\\]])([^,])", "$1\n$2") );
+			fw.flush();
+		}
+	}
+
 	private void createDockerCompose( Formatter fmt ) {
 		String padding = "";
-		fmt.format( "version: \"3.9\"%n" )
-			.format( "services:%n" );
+		fmt.format( "services:%n" );
 		for( Map.Entry< String, Program > service : slices.entrySet() ) {
 			fmt.format( "%2s%s:%n", padding, service.getKey().toLowerCase() )
 				.format( "%4s", padding )
-				.format( "build: ./%s%n", service.getKey().toLowerCase() );
+				.format( "build: ./%s%n", service.getKey().toLowerCase() )
+        .format( "%4s", padding )
+        .format( "platform: linux/amd64%n" );
 		}
 	}
 
