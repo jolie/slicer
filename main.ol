@@ -61,6 +61,11 @@ service Main {
 						startsWith@stringUtils( launcherRequest.args[i] { prefix = "-" } )( isAnOption )
 						if( isAnOption ) {
 							throw( UnrecognizedOption, "Unrecognized option " + launcherRequest.args[i] )
+						} else if( is_defined( request.program ) ) {
+						    throw( ProgramAlreadySpecified,
+						           "Program file already specified (" +
+						            request.program + "): found " +
+						            launcherRequest.args[i] )
 						} else {
 							request.program = launcherRequest.args[i]
 						}
