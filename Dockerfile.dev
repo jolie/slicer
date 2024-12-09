@@ -1,0 +1,8 @@
+FROM jolielang/jolie:1.11.2-dev AS build
+USER root
+WORKDIR /home/slicer
+COPY . .
+RUN npm link
+WORKDIR /app
+
+ENTRYPOINT ["jolieslicer"]

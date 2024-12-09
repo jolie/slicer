@@ -8,3 +8,5 @@ src/
 .java-version
 example/
 test/
+*.org
+Dockerfile*
