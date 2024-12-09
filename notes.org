@@ -1,0 +1,23 @@
+* Build Docker image
+#+begin_src bash
+  docker build . --no-cache --platform=linux/amd64 --tag slicer
+#+end_src
+#+begin_src bash
+  docker build . --file Dockerfile.dev --no-cache --platform=linux/amd64 --tag slicer-dev
+#+end_src
+* Run Docker image
+#+begin_src bash
+  docker run --rm -v `pwd`:/app -u `id -u`:`id -g` --platform linux/amd64 slicer
+#+end_src
+#+begin_src bash
+  docker run --rm -v `pwd`:/app -u `id -u`:`id -g` --platform linux/amd64 slicer-dev
+#+end_src
+* Run Slicer
+From within directory ~example/~
+#+begin_src bash
+  jolieslicer monolith.ol -c config-docker.json -o microservices
+#+end_src
+With docker:
+#+begin_src bash
+  docker run --rm -v `pwd`:/app -u `id -u`:`id -g` --platform linux/amd64 slicer-dev monolith.ol -c config-docker.json -o microservices
+#+end_src
