@@ -4,14 +4,6 @@ from string_utils import StringUtils
 from console import Console
 from time import Time
 
-constants {
-   COMMANDSIDE = "socket://localhost:10000",
-   QUERYSIDE = "socket://localhost:10001",
-   EVENTSTORE = "socket://localhost:10002",
-   TESTER = "socket://localhost:10003"
-}
-
-
 type PAID : long
 
 type ParkingArea : void {
@@ -68,7 +60,7 @@ service CommandSide( config : undefined ) {
     execution: concurrent
 
     inputPort InputCommands {
-        location: config.CommandSide.location
+        location: "auto:json:CommandSide.locations[0]:file:deployment.json"
         protocol: http { format = "json" } 
         interfaces:
             CommandSideInterface,
@@ -76,7 +68,7 @@ service CommandSide( config : undefined ) {
     }
 
     outputPort EventStore {
-        location: config.EventStore.location
+        location: "auto:json:EventStore.locations[0]:file:deployment.json"
         protocol: http { format = "json" } 
         interfaces: EventStoreInterface
     }
@@ -172,7 +164,7 @@ service QuerySide( config : undefined ) {
     execution: concurrent
 
     inputPort InputQuery {
-        location: config.QuerySide.location
+        location: "auto:json:QuerySide.locations[0]:file:deployment.json"
         protocol: http { format = "json" } 
         interfaces:
             QuerySideInterface,
@@ -187,7 +179,7 @@ service QuerySide( config : undefined ) {
     // }
 
     outputPort EventStore {
-        location: config.EventStore.location
+        location: "auto:json:EventStore.locations[0]:file:deployment.json"
         protocol: http { format = "json" } 
         interfaces: EventStoreInterface
     }
@@ -305,7 +297,7 @@ service EventStore( config : undefined ) {
     }
 
     inputPort IP {
-        location: config.EventStore.location
+        location: "auto:json:EventStore.locations[0]:file:deployment.json"
         protocol: http { format = "json" } 
         interfaces:
             EventStoreInterface, ShutDownInterface
@@ -447,7 +439,7 @@ service Main( config: undefined ) {
 service Test( config: undefined ) {
     execution: single
     outputPort EventStore {
-        location: config.EventStore.location
+        location: "auto:json:EventStore.locations[0]:file:deployment.json"
         protocol: http { format = "json" } 
         interfaces:
             EventStoreInterface,
@@ -455,7 +447,7 @@ service Test( config: undefined ) {
     }
 
     outputPort CommandSide {
-        location: config.CommandSide.location
+        location: "auto:json:CommandSide.locations[0]:file:deployment.json"
         protocol: http { format = "json" } 
         interfaces:
             CommandSideInterface,
@@ -463,8 +455,8 @@ service Test( config: undefined ) {
     }
 
     outputPort QuerySide {
-        location: config.QuerySide.location
-        protocol: http { format = "json" } 
+        location: "auto:json:QuerySide.locations[0]:file:deployment.json"
+        protocol: http { format = "json" }
         interfaces:
             QuerySideInterface,
             ShutDownInterface
@@ -479,7 +471,7 @@ service Test( config: undefined ) {
     // embed QuerySide(config) in QuerySide
 
     inputPort ip {
-        location: config.Test.location
+        location: "auto:json:Test.locations:file:deployment.json"
         protocol: http { format = "json" }
         interfaces:
             NotificationInterface

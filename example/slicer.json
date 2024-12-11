@@ -1,0 +1,26 @@
+{
+    "CommandSide": {
+        "params": {},
+        "locations": [
+            "commandside:5555"
+        ]
+    },
+    "QuerySide": {
+        "params": {},
+        "locations": [
+            "queryside"
+        ]
+    },
+    "EventStore": {
+        "params": {},
+        "locations": [
+            "eventstore"
+        ]
+    },
+    "Test": {
+        "params": {},
+        "locations": [
+            "test"
+        ]
+    }
+}

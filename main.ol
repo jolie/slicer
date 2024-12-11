@@ -24,9 +24,11 @@ from string-utils import StringUtils
 from console import Console
 
 from .jolie-slicer import Slicer
+from .simulator import Simulator
 
 service Main {
 	embed Slicer as slicer
+	embed Simulator as simulator
 	embed Console as console
 	embed StringUtils as stringUtils
 
@@ -57,6 +59,8 @@ service Main {
 						request.config = launcherRequest.args[++i]
 					} else if ( launcherRequest.args[i] == "--output" || launcherRequest.args[i] == "-o" ) {
 						request.outputDirectory = launcherRequest.args[++i]
+					} else if ( launcherRequest.args[i] == "--simulate" ) {
+            request.simulate = true
 					} else {
 						startsWith@stringUtils( launcherRequest.args[i] { prefix = "-" } )( isAnOption )
 						if( isAnOption ) {
@@ -74,12 +78,16 @@ service Main {
 				}
 				if( !is_defined(request.config) || !is_defined(request.program) ) {
 					throw( MissingArgument, "An argument is missing" )
-				}
-				// Here we receive java exceptions from the slicer, so we print the stack trace instead
-				install( default =>
-							println@console( usage.( usage.default ).stackTrace )()
-				)
-				slice@slicer( request )(  )
+				} else if( !request.simulate ) {
+				  // Here we receive java exceptions from the slicer, so we print the stack trace instead
+				  install( default =>
+					  		println@console( usage.( usage.default ).stackTrace )()
+				  )
+				  slice@slicer( request )(  )
+        } else {
+          println@console( "Simulator?" )()
+          run@simulator( request )()
+        }
 			}
 		}
 	}
