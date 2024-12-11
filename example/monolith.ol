@@ -377,6 +377,73 @@ service EventStore( config : undefined ) {
     }
 }
 
+service Main( config: undefined ) {
+    outputPort EventStore {
+        location: config.EventStore.location
+        protocol: http { format = "json" }
+        interfaces:
+            EventStoreInterface,
+            ShutDownInterface
+    }
+
+    outputPort CommandSide {
+        location: config.CommandSide.location
+        protocol: http { format = "json" }
+        interfaces:
+            CommandSideInterface,
+            ShutDownInterface
+    }
+
+    outputPort QuerySide {
+        location: config.QuerySide.location
+        protocol: http { format = "json" }
+        interfaces:
+            QuerySideInterface,
+            ShutDownInterface
+    }
+
+    inputPort ip {
+        location: config.Main.location
+        protocol: http { format = "json" }
+        aggregates:
+          QuerySide,
+          CommandSide
+    }
+
+    embed Time as time
+    embed Console as console
+    embed StringUtils as su
+    embed Runtime as runtime
+
+    define printLoading {
+        for(i=0,i<3,i++){sleep@time(200)();print@console(". ")()}
+        sleep@time(200)()
+        println@console( "done!" )()
+    }
+
+    init {
+        global.debug = config.Main.debug
+        if(!is_defined(config.Main.docker) || !config.Test.docker) {
+            dependencies[0] << { service = "EventStore" filepath="monolith.ol" params -> config }
+            dependencies[1] << { service = "CommandSide" filepath="monolith.ol" params -> config}
+            dependencies[2] << { service = "QuerySide" filepath="monolith.ol" params -> config}
+            println@console( "---- EMBEDDING DEPENDENCIES ----" )()
+            for( service in dependencies ) {
+                print@console( "Embedding " + service.service + ": " )()
+                loadEmbeddedService@runtime( service )()
+                printLoading
+            }
+		    } /* else {
+          replaceAll@su( config.Test.location {regex = "localhost" replacement = "test" } )
+                       ( config.Test.location )
+        } */
+    }
+
+    main {
+        linkIn( Exit )
+    }
+}
+
 service Test( config: undefined ) {
     execution: single
     outputPort EventStore {
