@@ -235,7 +235,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( LinkInStatement n ) {
-		assert false;
+		pp.append( "linkIn" ).spacedParens( _0 -> _0.append( n.id() ) );
 	}
 
 	@Override
@@ -283,15 +283,15 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 		pp
 			.intercalate( n.children(),
 				( pair, _0 ) -> _0 // Pair (condition, body)
-					.append( "if" )
+					.append( Keywords.IF )
 					.spacedParens( _1 -> pair.key().accept( this ) )
 					.newCodeBlock( _1 -> pair.value().accept( this ) ),
 				_0 -> _0
-					.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, "else" ) ) )
+					.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, Keywords.ELSE ) ) )
 			.ifPresent(
 				Optional.ofNullable( n.elseProcess() ),
 				( proc, _0 ) -> _0
-					.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, "else" ) )
+					.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, Keywords.ELSE ) )
 					.newCodeBlock( _1 -> proc.accept( this ) ) );
 	}
 
@@ -302,7 +302,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( WhileStatement n ) {
-		pp.append( "while" )
+		pp.append( Keywords.WHILE )
 			.spacedParens( _0 -> n.condition().accept( this ) )
 			.newCodeBlock( _0 -> n.body().accept( this ) );
 	}
@@ -438,12 +438,12 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( NullProcessStatement n ) {
-		pp.append( "nullProcess" );
+		pp.append( Keywords.NULL_PROCESS );
 	}
 
 	@Override
 	public void visit( Scope n ) {
-		pp.append( "scope" )
+		pp.append( Keywords.SCOPE )
 			.space()
 			.spacedParens( _0 -> n.id() )
 			.newCodeBlock( _0 -> n.body().accept( this ) );
@@ -451,7 +451,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( InstallStatement n ) {
-		pp.append( "install" )
+		pp.append( Keywords.INSTALL )
 			.spacedParens( _0 -> _0
 				.intercalate( Arrays.asList( n.handlersFunction().pairs() ),
 					( pair, _1 ) -> _1
@@ -464,13 +464,13 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( CompensateStatement n ) {
-		pp.append( "comp" )
+		pp.append( Keywords.COMP )
 			.spacedParens( asPPConsumer( PrettyPrinter::append, n.id() ) );
 	}
 
 	@Override
 	public void visit( ThrowStatement n ) {
-		pp.append( "throw" )
+		pp.append( Keywords.THROW )
 			.spacedParens( _0 -> _0
 				.append( n.id() )
 				.ifPresent(
@@ -488,7 +488,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( ExecutionInfo n ) {
-		pp.append( "execution" )
+		pp.append( Keywords.EXECUTION )
 			.colon()
 			.space()
 			.append( n.mode().name().toLowerCase() );
@@ -496,7 +496,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( CorrelationSetInfo n ) {
-		pp.append( "cset" )
+		pp.append( Keywords.CSET )
 			.space()
 			.newCodeBlock( _0 -> _0
 				.intercalate( n.variables(),
@@ -519,24 +519,24 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( InputPortInfo n ) {
-		pp.append( "inputPort" )
+		pp.append( Keywords.INPUT_PORT )
 			.space()
 			.append( n.id() )
 			.space()
 			.newCodeBlock( _0 -> _0
-				.append( "location" )
+				.append( Keywords.INPUTPORT_LOCATION )
 				.colon()
 				.space()
 				.run( _1 -> n.location().accept( this ) )
 				.newline()
 				.onlyIf( n.protocol() != null, _1 -> _1
-					.append( "protocol" )
+					.append( Keywords.INNPUTPORT_PROTOCOL )
 					.colon()
 					.space()
 					.run( _2 -> n.protocol().accept( this ) )
 					.newline() )
 				.onlyIf( !n.getInterfaceList().isEmpty(), _1 -> _1
-					.append( "interfaces" )
+					.append( Keywords.INPUTPORT_INTERFACES )
 					.colon()
 					.nest( _2 -> _2
 						.ifTrueOrElse( n.getInterfaceList().size() > 1,
@@ -546,14 +546,27 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 							( id, pp ) -> pp.append( id.name() ),
 							pp -> pp.comma().newline() ) ) )
 				.onlyIf( n.aggregationList().length > 0, _1 -> _1
-					// TODO: pretty print aggregates
-					.append( "aggregates" )
+					.append( Keywords.INPUTPORT_AGGREGATES )
 					.colon()
-					.space()
-					.append( "NOT IMPLEMENTED" ) )
+					.nest( _2 -> _2
+						.newline()
+						.intercalate( List.of(n.aggregationList()),
+							( aggregationItem, _3 ) -> _3
+								.onlyIf( aggregationItem.outputPortList().length > 1, PrettyPrinter::lbrace )
+								.intercalate( List.of(aggregationItem.outputPortList()),
+										(port, _4) -> _4.append(port),
+										_4 -> _4.comma().space() )
+								.onlyIf( aggregationItem.outputPortList().length > 1, PrettyPrinter::rbrace )
+								.ifPresent( Optional.ofNullable( aggregationItem.interfaceExtender() ),
+									(extender, _4) -> _4
+										.space()
+										.append( Keywords.WITH )
+										.space()
+										.append( extender.name() ) ),
+							_3 -> _3.comma().newline() ) ) )
 				.onlyIf( !n.redirectionMap().isEmpty(), _1 -> _1
 					// TODO: pretty print redirects
-					.append( "redirects" )
+					.append( Keywords.INPUTPORT_REDIRECTS )
 					.colon()
 					.space()
 					.append( "NOT IMPLEMENTED" ) ) );
@@ -561,25 +574,25 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( OutputPortInfo n ) {
-		pp.append( "outputPort" )
+		pp.append( Keywords.OUTPUT_PORT )
 			.space()
 			.append( n.id() )
 			.space()
 			.newCodeBlock( _0 -> _0
 				.onlyIf( n.location() != null, _1 -> _1
-					.append( "location" )
+					.append( Keywords.INPUTPORT_LOCATION )
 					.colon()
 					.space()
 					.run( _2 -> n.location().accept( this ) )
 					.newline() )
 				.onlyIf( n.protocol() != null, _1 -> _1
-					.append( "protocol" )
+					.append( Keywords.INNPUTPORT_PROTOCOL )
 					.colon()
 					.space()
 					.run( _2 -> n.protocol().accept( this ) )
 					.newline() )
 				.onlyIf( !n.getInterfaceList().isEmpty(), _1 -> _1
-					.append( "interfaces" )
+					.append( Keywords.INPUTPORT_INTERFACES )
 					.colon()
 					.nest( _2 -> _2
 						.ifTrueOrElse( n.getInterfaceList().size() > 1,
@@ -613,7 +626,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( UndefStatement n ) {
-		pp.append( "undef" )
+		pp.append( Keywords.UNDEF )
 			.spacedParens( _0 -> n.variablePath().accept( this ) );
 	}
 
@@ -649,7 +662,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( ForStatement n ) {
-		pp.append( "for" )
+		pp.append( Keywords.FOR )
 			.spacedParens( pp -> {
 				n.init().accept( this );
 				pp.comma().space();
@@ -662,7 +675,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( ForEachSubNodeStatement n ) {
-		pp.append( "foreach" )
+		pp.append( Keywords.FOREACH )
 			.spacedParens( _0 -> {
 				n.keyPath().accept( this );
 				_0.surround( PrettyPrinter::space, PrettyPrinter::colon );
@@ -673,7 +686,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( ForEachArrayItemStatement n ) {
-		pp.append( "for" )
+		pp.append( Keywords.FOR )
 			.spacedParens( _0 -> {
 				n.keyPath().accept( this );
 				_0.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, "in" ) );
@@ -684,13 +697,13 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( SpawnStatement n ) {
-		pp.append( "spawn" )
+		pp.append( Keywords.SPAWN )
 			.spacedParens( pp -> {
 				n.indexVariablePath().accept( this );
-				pp.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, "over" ) );
+				pp.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, Keywords.OVER ) );
 				n.upperBoundExpression().accept( this );
 			} )
-			.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, "in" ) )
+			.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, Keywords.IN ) )
 			.run( _0 -> n.inVariablePath().accept( this ) )
 			.space()
 			.newCodeBlock( _0 -> n.body().accept( this ) );
@@ -720,14 +733,14 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( SynchronizedStatement n ) {
-		pp.append( "synchronized" )
+		pp.append( Keywords.SYNCHRONIZED )
 			.spacedParens( asPPConsumer( PrettyPrinter::append, n.id() ) )
 			.newCodeBlock( _0 -> n.body().accept( this ) );
 	}
 
 	@Override
 	public void visit( CurrentHandlerStatement n ) {
-		pp.append( "cH" );
+		pp.append( Keywords.CH );
 	}
 
 	@Override
@@ -739,7 +752,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 		case JOLIE:
 		case JAVA:
 		case JAVASCRIPT:
-			pp.append( "embedded" )
+			pp.append( Keywords.EMBEDDED )
 				.space()
 				.newCodeBlock( _0 -> _0
 					.append( n.type().toString() )
@@ -747,7 +760,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 					.surround( '"', asPPConsumer( PrettyPrinter::append, n.servicePath() ) )
 					.ifPresent( Optional.ofNullable( n.portId() ),
 						( id, _1 ) -> _1
-							.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, "in" ) )
+							.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, Keywords.IN ) )
 							.append( n.portId() ) ) );
 			break;
 		default:
@@ -763,7 +776,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( VariablePathNode n ) {
-		pp.onlyIf( n.isGlobal(), _0 -> _0.append( "global" ).dot() )
+		pp.onlyIf( n.isGlobal(), _0 -> _0.append( Keywords.GLOBAL ).dot() )
 			.intercalate( n.path(),
 				(element, pp) -> {
 					OLSyntaxNode node = element.key();
@@ -781,7 +794,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( TypeInlineDefinition n ) {
-		pp.onlyIf( isTopLevelTypeDeclaration, pp -> pp.append( "type" ).space() )
+		pp.onlyIf( isTopLevelTypeDeclaration, pp -> pp.append( Keywords.TYPE ).space() )
 			.onlyIf( !printOnlyLinkedTypeName, pp -> pp
 				.append( n.name() )
 				.run( _0 -> printTypeCardinality( n.cardinality() ) )
@@ -804,7 +817,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( TypeDefinitionLink n ) {
-		pp.onlyIf( isTopLevelTypeDeclaration, pp -> pp.append( "type" ).space() )
+		pp.onlyIf( isTopLevelTypeDeclaration, pp -> pp.append( Keywords.TYPE ).space() )
 		    .onlyIf( !printOnlyLinkedTypeName, pp -> pp
 				.append( n.name() )
 				.run( _0 -> printTypeCardinality( n.cardinality() ) )
@@ -833,7 +846,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( InterfaceDefinition n ) {
-		pp.append( "interface" )
+		pp.append( Keywords.INTERFACE )
 			.space()
 			.append( n.name() )
 			.space()
@@ -845,7 +858,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 				List< OperationDeclaration > requestResponseOperations = operations.get( false );
 				pp
 					.onlyIf( !oneWayOperations.isEmpty(), _0 -> _0
-						.append( "OneWay" )
+						.append( Keywords.ONEWAY )
 						.colon()
 						.nest( _1 -> _1
 							.newline()
@@ -854,7 +867,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 								_2 -> _2.comma().newline() ) )
 						.onlyIf( !requestResponseOperations.isEmpty(), PrettyPrinter::newline ) )
 					.onlyIf( !requestResponseOperations.isEmpty(), _0 -> _0
-						.append( "RequestResponse" )
+						.append( Keywords.REQUESTRESPONSE )
 						.colon()
 						.nest( _1 -> _1
 							.newline()
@@ -999,11 +1012,11 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( ImportStatement n ) {
-		pp.append( "from" )
+		pp.append( Keywords.FROM )
 			.surround(
 				PrettyPrinter::space,
 				asPPConsumer(PrettyPrinter::append, n.prettyPrintTarget() ) )
-			.append( "import" )
+			.append( Keywords.IMPORT )
 			.space()
 			.intercalate(
 				Arrays.asList( n.importSymbolTargets() ),
@@ -1013,7 +1026,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( ServiceNode n ) {
-		pp.append( "service" )
+		pp.append( Keywords.SERVICE )
 			.space()
 			.append( n.name() )
 			.space()
@@ -1029,14 +1042,14 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( EmbedServiceNode n ) {
-		pp.append( "embed" )
+		pp.append( Keywords.EMBED )
 			.space()
 			.append( n.serviceName() )
 			.onlyIf( n.passingParameter() != null, _0 -> _0
 				.parens( _1 -> n.passingParameter().accept( this ) ) )
 			.onlyIf( n.bindingPort() != null, _0 -> _0
 				.space()
-				.append( n.isNewPort() ? "as" : "in" )
+				.append( n.isNewPort() ? Keywords.EMBED_AS : Keywords.IN )
 				.space()
 				.append( n.bindingPort().id() ) );
 	}
@@ -1281,13 +1294,13 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit(IfExpressionNode n) {
-		pp.append("if")
+		pp.append( Keywords.IF )
 			.spacedParens( _1 -> n.guard().accept(this));
 		n.thenExpression().accept(this);
 		pp.ifPresent(
 			Optional.ofNullable( n.elseExpression() ),
 			( proc, _0 ) -> _0
-				.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, "else" ) )
+				.surround( PrettyPrinter::space, asPPConsumer( PrettyPrinter::append, Keywords.ELSE ) )
 				.newCodeBlock( _1 -> proc.accept( this ) ) );
 	}
 }
