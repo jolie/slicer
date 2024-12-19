@@ -1,8 +1,5 @@
-#!/usr/bin/env jolie
-
 /*
- * Copyright (C) 2021 Valentino Picotti
- * Copyright (C) 2021 Fabrizio Montesi <famontesi@gmail.com>
+ * Copyright (C) 2024 Valentino Picotti
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -20,53 +17,43 @@
  * MA 02110-1301  USA
  */
 
-from string-utils import StringUtils
-from file import File
 from console import Console
-from runtime import Runtime
+from file import File
 from json-utils import JsonUtils
+from runtime import Runtime
+from string-utils import StringUtils
+
+type SimulatorRequest {
+  deployment: undefined
+  program: string
+  simulate: string
+}
 
 interface SimulatorIface {
   RequestResponse:
-    run( undefined )( undefined )
+    run( SimulatorRequest )( undefined )
 }
 
 service Simulator {
 	embed Console as console
-	embed StringUtils as str
-  embed JsonUtils as json
   embed File as file
+  embed JsonUtils as json
   embed Runtime as runtime
+	embed StringUtils as str
 
   inputPort in {
     location: "local"
     interfaces: SimulatorIface
   }
 
-  // outputPort self {
-  // }
-
   main {
     run( request )( response ){
-      println@console( "Simulator" )()
-      readFile@file( { filename = request.config  format = "json" } )( slicerConfig )
-      // produce deployment.json from slicer.json
-      foreach( service : slicerConfig ) {
-        i = 0
-        for( location in slicerConfig.(service).locations ) {
-          match@str( location { regex = "([^:]+)(?>:(\\d{1,5}\\Z))?" } )( match )
-          if( match.group[2] != "" ) { // port declaration
-            deployment.( service ).locations[i] = "socket://localhost:" + match.group[2]
-          } else {
-            deployment.( service ).locations[i] = "local://" + match.group[1]
-          }
-          ++i
-        }
-      }
-      getJsonString@json( deployment )( json )
-      replaceAll@str( json { regex = "\\\\" replacement = "" } )( json )
-      replaceAll@str( json { regex = "([{},\\[\\]])([^,])" replacement = "$1\n$2" } )( json )
-      writeFile@file( { filename = "deployment.json" content -> json } )()
+      println@console( "---- RUNNING SERVICE " + request.simulate + " ----" )()
+      loadEmbeddedService@runtime( {
+          service -> request.simulate
+          filepath -> request.program
+          params -> request.deployment } )()
+      linkIn( Exit )
     }
   }
 }

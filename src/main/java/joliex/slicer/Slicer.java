@@ -46,28 +46,16 @@ import org.json.simple.parser.ParseException;
  */
 public class Slicer {
 	final Program program;
-	final Path configPath;
 	final Path outputDirectory;
-	final JSONObject config;
+	final Set<String> services;
 	final DependenciesResolver dependenciesResolver;
 	Map< String, Program > slices = null;
 
-	private static final String DOCKERFILE_FILENAME = "Dockerfile";
-	private static final String DOCKERCOMPOSE_FILENAME = "docker-compose.yml";
-	private static final String CONFIG_LOCATION_KEY = "location";
-	private static final String CONFIG_LOCATION_LOCALHOST = "localhost" ;
-
-	private Slicer( Program p, Path configPath, Path outputDirectory )
+	private Slicer( Program p, Path outputDirectory, Set<String> services )
 		throws FileNotFoundException, InvalidConfigurationFileException {
 		this.program = p;
-		this.configPath = configPath;
 		this.outputDirectory = outputDirectory;
-		Object o = JSONValue.parse( new FileReader( configPath.toFile() ) );
-		if( !(o instanceof JSONObject) ) {
-			String msg = "Top level definition must be a json object";
-			throw new InvalidConfigurationFileException( msg );
-		}
-		this.config = (JSONObject) o;
+		this.services = services;
 		p.children()
 			.stream()
 			.filter( ServiceNode.class::isInstance )
@@ -76,9 +64,9 @@ public class Slicer {
 		this.dependenciesResolver = new DependenciesResolver( p );
 	}
 
-	public static Slicer create( Program p, Path configPath, Path outputDirectory )
+	public static Slicer create( Program p, Path outputDirectory, Set<String> services )
 		throws FileNotFoundException, InvalidConfigurationFileException {
-		Slicer slicer = new Slicer( p, configPath, outputDirectory );
+		Slicer slicer = new Slicer( p, outputDirectory, services );
 		slicer.sliceProgram();
 		return slicer;
 	}
@@ -88,13 +76,7 @@ public class Slicer {
 		final StringBuilder msg = new StringBuilder();
 		final Path programPath = Paths.get( program.context().sourceName() ).getFileName();
 
-		final Set< String > undeclaredServices = ((Set<?>) config.keySet())
-				.stream()
-				.filter( String.class::isInstance )
-				.map( String.class::cast )
-				.collect( Collectors.toSet() );
-
-		// undeclaredServices.removeAll( declaredServices.entrySet() );
+		/* undeclaredServices.removeAll( declaredServices.entrySet() );
 		if( !undeclaredServices.isEmpty() ) {
 			for( String service : undeclaredServices ) {
 				msg.append( "Service " )
@@ -105,14 +87,13 @@ public class Slicer {
 					.append( programPath )
 					.append( System.lineSeparator() );
 			}
-		}
+		} */
 
 		ArrayList< String > servicesWithoutParameter = declaredServices.entrySet().stream()
-			.filter( e -> config.containsKey( e.getKey() ) && e.getValue().parameterConfiguration().isPresent() )
+			.filter( e -> services.contains( e.getKey() ) && e.getValue().parameterConfiguration().isPresent() )
 			.map( e -> e.getValue().name() )
 			.collect( Collectors.toCollection( ArrayList::new ) );
 		if( !servicesWithoutParameter.isEmpty() ) {
-
 			for( String service : servicesWithoutParameter ) {
 				msg.append( "Service " + service + " in " + programPath ).append( " does not declare a parameter" )
 					.append( System.lineSeparator() );
@@ -131,7 +112,7 @@ public class Slicer {
 			.filter( ServiceNode.class::isInstance )
 			.map( ServiceNode.class::cast )
 			// Slice only services that are present in the configuration
-			.filter( s -> config.containsKey( s.name() ) )
+			.filter( s -> services.contains( s.name() ) )
 			.forEach( s -> {
 				// Sort dependencies by their line to preserve the ordering given by the programmer
 				List< OLSyntaxNode > newProgram =
@@ -164,75 +145,14 @@ public class Slicer {
 			// Create Service Directory
 			Path serviceDir = outputDirectory.resolve( service.getKey().toLowerCase() );
 			Files.createDirectories( serviceDir );
-			// Copy configuration file
-			Path newConfigPath = serviceDir.resolve( configPath.getFileName() );
-			Files.copy( configPath, newConfigPath, StandardCopyOption.REPLACE_EXISTING );
-			System.out.println( newConfigPath.toString() );
-			makeConfigLocalToService( newConfigPath, service.getKey() );
 			// Output Jolie
 			Path jolieFilePath = serviceDir.resolve( service.getKey() + ".ol" );
 			try( OutputStream os =
 				Files.newOutputStream( jolieFilePath, CREATE, TRUNCATE_EXISTING, WRITE ) ) {
 				pp.visit( service.getValue() );
 				os.write( pp.toString().getBytes() );
+				os.flush();
 			}
-			// Output Dockerfile
-			try( OutputStream os =
-				Files.newOutputStream( serviceDir.resolve( DOCKERFILE_FILENAME ),
-					CREATE, TRUNCATE_EXISTING, WRITE ) ) {
-				String dfString = String.format(
-					"FROM jolielang/jolie%n"
-						+ "COPY %1$s .%n"
-						+ "COPY %2$s .%n"
-						+ "CMD [\"jolie\", \"--params\", \"%2$s\", \"%1$s\"]",
-					jolieFilePath.getFileName(),
-					configPath.getFileName() );
-				os.write( dfString.getBytes() );
-			}
-		}
-		// Output docker-compose
-		try( Formatter fmt =
-			new Formatter( outputDirectory.resolve( DOCKERCOMPOSE_FILENAME ).toFile() ) ) {
-			createDockerCompose( fmt );
-		}
-	}
-
-	private void makeConfigLocalToService( Path dockerServiceConfig, String serviceName ) throws IOException {
-        FileReader configReader = new FileReader( dockerServiceConfig.toFile() );
-		JSONObject globalConfig = null;
-        try {
-            globalConfig = (JSONObject) JSONValue.parseWithException( configReader );
-        } catch (ParseException e) {
-            throw new RuntimeException(e);
-        }
-        globalConfig.replaceAll( ( serviceKey, serviceConfig ) -> {
-        	if ( serviceName.equals(serviceKey) ) {
-				return serviceConfig;
-			}
-			String newLocation = ((String) ((JSONObject) serviceConfig).get(CONFIG_LOCATION_KEY))
-					.replace( CONFIG_LOCATION_LOCALHOST, ((String) serviceKey).toLowerCase() );
-			((HashMap<String, Object>) serviceConfig).replace( CONFIG_LOCATION_KEY, newLocation);
-            return serviceConfig;
-        } );
-		configReader.close();
-		System.out.println( globalConfig.toJSONString() );
-		try( FileWriter fw = new FileWriter( dockerServiceConfig.toFile() ) ) {
-			fw.write( globalConfig.toJSONString()
-					.replace( "\\/", "/")
-					.replaceAll( "([{},\\[\\]])([^,])", "$1\n$2") );
-			fw.flush();
-		}
-	}
-
-	private void createDockerCompose( Formatter fmt ) {
-		String padding = "";
-		fmt.format( "services:%n" );
-		for( Map.Entry< String, Program > service : slices.entrySet() ) {
-			fmt.format( "%2s%s:%n", padding, service.getKey().toLowerCase() )
-				.format( "%4s", padding )
-				.format( "build: ./%s%n", service.getKey().toLowerCase() )
-        .format( "%4s", padding )
-        .format( "platform: linux/amd64%n" );
 		}
 	}
 

@@ -35,22 +35,25 @@ import jolie.runtime.embedding.RequestResponse;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 
 public class JolieSlicer extends JavaService {
-
+    private static final String PROGRAM_CHILD = "program";
+    public static final String SERVICES_CHILD = "services";
+    public static final String OUTPUT_DIRECTORY_CHILD = "outputDirectory";
     private static final boolean INCLUDE_DOCUMENTATION = false;
-    private static final String[] EMPTY_INCLUDE_PATHS = new String[0];
-    private static final ClassLoader CLASS_LOADER = JolieSlicer.class.getClassLoader();
-
+ 
     @RequestResponse
     public void slice( Value request ) throws FaultException {
 
-        final Path programPath = Path.of( request.getFirstChild( "program" ).strValue() );
-        final Path configPath = Path.of( request.getFirstChild( "config" ).strValue() );
+        final Path programPath = Path.of( request.getFirstChild( PROGRAM_CHILD ).strValue() );
+        final Set<String> services = request.getChildren( SERVICES_CHILD )
+                .stream().map(Value::strValue).collect(Collectors.toSet());
         final Path outputDirectory;
-        if( request.hasChildren( "outputDirectory" ) ) {
-            outputDirectory = Path.of(request.getFirstChild( "outputDirectory" ).strValue() );
+        if( request.hasChildren( OUTPUT_DIRECTORY_CHILD ) ) {
+            outputDirectory = Path.of(request.getFirstChild( OUTPUT_DIRECTORY_CHILD ).strValue() );
         } else { // Generete the sliced program into a directory with the same name of the program
             String filename = programPath.getFileName().toString();
             int fileExtensionIndex = filename.lastIndexOf( ".ol" );
@@ -69,13 +72,8 @@ public class JolieSlicer extends JavaService {
         }
         newArgs.add( programPath.toString() );
 
-        /* try ( InputStream stream = Files.newInputStream( programPath ) ) { */
-            final Path absolute = programPath.toAbsolutePath();
-            final Path programDirectory = absolute.getParent();
-
-            
-            try( CommandLineParser cmdLnParser =
-			            new CommandLineParser( newArgs.toArray(new String[0]), JolieSlicer.class.getClassLoader() ) ) {
+        try( CommandLineParser cmdLnParser =
+                     new CommandLineParser( newArgs.toArray(new String[0]), JolieSlicer.class.getClassLoader() ) ) {
 
 			Interpreter.Configuration intConf = cmdLnParser.getInterpreterConfiguration();
 
@@ -93,19 +91,9 @@ public class JolieSlicer extends JavaService {
 				intConf.constants(),
 				semVerConfig,
 				INCLUDE_DOCUMENTATION );
-            
-            /*
-            final Scanner scanner = new Scanner(stream, programDirectory.toUri(), null, INCLUDE_DOCUMENTATION);
-            final OLParser olParser = new OLParser(scanner, EMPTY_INCLUDE_PATHS, CLASS_LOADER);
-            final Program program = olParser.parse(); */
 
-            final Slicer slicer = Slicer.create(
-                    program,
-                    configPath,
-                    outputDirectory);
-
+            final Slicer slicer = Slicer.create( program, outputDirectory, services );
             slicer.generateServiceDirectories();
-
         } catch ( CommandLineException | InvalidConfigurationFileException | CodeCheckException | IOException e ) {
             throw new FaultException( e.getClass().getSimpleName(), e );
         }

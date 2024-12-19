@@ -1,0 +1,7 @@
+FROM jolielang/jolie:{{{jolie_version}}}
+COPY {{{service_file}}} .
+COPY {{{config_file}}} .
+{{#ports}}
+EXPOSE {{.}}
+{{/ports}}
+CMD ["jolie", "--params", "{{{config_file}}}", "{{{service_file}}}"]

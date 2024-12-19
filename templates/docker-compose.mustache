@@ -1,0 +1,12 @@
+services:
+{{#services}}
+    {{{name}}}:
+        build: ./{{{name}}}
+        platform: linux/amd64
+    {{#has_ports}}
+        ports:
+    {{/has_ports}}
+    {{#ports}}
+            - {{{exposed}}}:{{{internal}}}
+    {{/ports}}
+{{/services}}
