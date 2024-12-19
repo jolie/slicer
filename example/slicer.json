@@ -1,26 +1,33 @@
 {
     "CommandSide": {
         "params": {},
-        "locations": [
-            "commandside:5555"
+        "ports": [
+            "internal",
+            8080
         ]
     },
     "QuerySide": {
         "params": {},
-        "locations": [
-            "queryside"
+        "ports": [
+            "internal"
         ]
     },
     "EventStore": {
         "params": {},
-        "locations": [
-            "eventstore"
+        "ports": [
+            "internal"
+        ]
+    },
+    "Main": {
+        "params": {},
+        "ports": [
+            "internal"
         ]
     },
     "Test": {
         "params": {},
-        "locations": [
-            "test"
+        "ports": [
+            "internal"
         ]
     }
 }

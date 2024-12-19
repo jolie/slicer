@@ -4,44 +4,44 @@ from string_utils import StringUtils
 from console import Console
 from time import Time
 
-type PAID : long
+type PAID: long
 
-type ParkingArea : void {
-    .id : PAID
-    .info : ParkingAreaInformation
+type ParkingArea: void {
+    id: PAID
+    info: ParkingAreaInformation
 }
 
-type ParkingAreaInformation : void {
-    .name : string
-    .availability * : TimePeriod
-    .chargingSpeed : ChargingSpeed
+type ParkingAreaInformation: void {
+    name: string
+    availability*: TimePeriod
+    chargingSpeed: ChargingSpeed
 }
 
-type ChargingSpeed : string( enum( ["FAST", "SLOW"] ) )
+type ChargingSpeed: string( enum( ["FAST", "SLOW"] ) )
 
-type TimePeriod : void {
-    .start : int( ranges( [0, 23] ) )
-    .end : int( ranges( [1,24] ) )
+type TimePeriod: void {
+    start: int( ranges( [0, 23] ) )
+    end: int( ranges( [1,24] ) )
 }
 
-type PACreatedEvent : void {
-    .type : string( enum( ["PA_CREATED"] ) )
-    .id : PAID
-    .info : ParkingAreaInformation
+type PACreatedEvent: void {
+    type: string( enum( ["PA_CREATED"] ) )
+    id: PAID
+    info: ParkingAreaInformation
 }
 
-type PAUpdatedEvent : void {
-    .type : string( enum( ["PA_UPDATED"] ) )
-    .id : PAID
-    .info : ParkingAreaInformation
+type PAUpdatedEvent: void {
+    type: string( enum( ["PA_UPDATED"] ) )
+    id: PAID
+    info: ParkingAreaInformation
 }
 
-type PADeletedEvent : void {
-    .type : string( enum( ["PA_DELETED"] ) )
-    .id : PAID
+type PADeletedEvent: void {
+    type: string( enum( ["PA_DELETED"] ) )
+    id: PAID
 }
 
-type DomainEvent : PACreatedEvent | PAUpdatedEvent | PADeletedEvent
+type DomainEvent: PACreatedEvent | PAUpdatedEvent | PADeletedEvent
 
 interface CommandSideInterface {
     RequestResponse:
@@ -60,7 +60,7 @@ service CommandSide( config : undefined ) {
     execution: concurrent
 
     inputPort InputCommands {
-        location: "auto:json:CommandSide.locations[0]:file:deployment.json"
+        location: config.CommandSide.locations._[0]
         protocol: http { format = "json" } 
         interfaces:
             CommandSideInterface,
@@ -68,7 +68,7 @@ service CommandSide( config : undefined ) {
     }
 
     outputPort EventStore {
-        location: "auto:json:EventStore.locations[0]:file:deployment.json"
+        location: config.EventStore.locations._[0]
         protocol: http { format = "json" } 
         interfaces: EventStoreInterface
     }
@@ -77,7 +77,7 @@ service CommandSide( config : undefined ) {
     embed Console as C
     embed StringUtils as S
 
-    init { global.debug = config.CommandSide.debug }
+    init { global.debug = config.CommandSide.params.debug }
 
     main {
         [ createParkingArea( pa )( id )
@@ -140,14 +140,13 @@ service CommandSide( config : undefined ) {
     }
 }
 
-type GetParkingAreaResponse : ParkingArea | string( enum( ["NOT FOUND"] ) )
-type GetParkingAreasResponse : void {
-    .list* : ParkingAreaInformation
+type GetParkingAreaResponse: ParkingArea | string( enum( ["NOT FOUND"] ) )
+type GetParkingAreasResponse: void {
+    list*: ParkingAreaInformation
 }
 
-/* A location is just an index into the vector global.db
-*/
-type Location : int
+// A location is just an index into the vector global.db
+type Location: int
 
 interface QuerySideInterface {
     RequestResponse:
@@ -160,11 +159,11 @@ interface NotificationInterface {
        notify( DomainEvent )
 }
 
-service QuerySide( config : undefined ) {
+service QuerySide( config: undefined ) {
     execution: concurrent
 
     inputPort InputQuery {
-        location: "auto:json:QuerySide.locations[0]:file:deployment.json"
+        location: config.QuerySide.locations._[0]
         protocol: http { format = "json" } 
         interfaces:
             QuerySideInterface,
@@ -179,7 +178,7 @@ service QuerySide( config : undefined ) {
     // }
 
     outputPort EventStore {
-        location: "auto:json:EventStore.locations[0]:file:deployment.json"
+        location: config.EventStore.locations._[0]
         protocol: http { format = "json" } 
         interfaces: EventStoreInterface
     }
@@ -191,13 +190,8 @@ service QuerySide( config : undefined ) {
     embed Time as T
 
     init {
-        // getLocalLocation@Runtime()( subscriber.location )
-        global.debug = config.QuerySide.debug
-        if( is_defined( config.QuerySide.docker ) && config.QuerySide.docker ) {
-            replaceAll@S( config.QuerySide.location{regex = "localhost" replacement = "queryside"} )
-                         ( config.QuerySide.location )
-        }
-        subscriber.location = config.QuerySide.location
+        global.debug = config.QuerySide.params.debug
+        subscriber.location = config.QuerySide.locations._[0]
         pushBackTopic -> subscriber.topics[#subscriber.topics]
         pushBackTopic = "PA_CREATED"
         pushBackTopic = "PA_UPDATED"
@@ -271,14 +265,14 @@ service QuerySide( config : undefined ) {
     }
 }
 
-type Topic : string
+type Topic: string
 
-type Subscriber : void {
-    .topics [1,*] : Topic
-    .location : string
+type Subscriber: void {
+    topics[1,*]: Topic
+    location: string
 }
 
-type SubscriptionResponse : string 
+type SubscriptionResponse: string 
 
 interface EventStoreInterface {
     RequestResponse:
@@ -288,7 +282,7 @@ interface EventStoreInterface {
         publishEvent( DomainEvent )
 }
 
-service EventStore( config : undefined ) {
+service EventStore( config: undefined ) {
     execution: concurrent
 
     outputPort Subscriber {
@@ -297,7 +291,7 @@ service EventStore( config : undefined ) {
     }
 
     inputPort IP {
-        location: "auto:json:EventStore.locations[0]:file:deployment.json"
+        location: config.EventStore.locations._[0]
         protocol: http { format = "json" } 
         interfaces:
             EventStoreInterface, ShutDownInterface
@@ -306,7 +300,7 @@ service EventStore( config : undefined ) {
     embed Console as C
     embed StringUtils as S
 
-    init { global.debug = config.EventStore.debug }
+    init { global.debug = config.EventStore.params.debug }
 
     main {
         [ subscribe( subscriber )( response ) {
@@ -371,7 +365,7 @@ service EventStore( config : undefined ) {
 
 service Main( config: undefined ) {
     outputPort EventStore {
-        location: config.EventStore.location
+        location: config.EventStore.locations._[0]
         protocol: http { format = "json" }
         interfaces:
             EventStoreInterface,
@@ -379,7 +373,7 @@ service Main( config: undefined ) {
     }
 
     outputPort CommandSide {
-        location: config.CommandSide.location
+        location: config.CommandSide.locations._[0]
         protocol: http { format = "json" }
         interfaces:
             CommandSideInterface,
@@ -387,7 +381,7 @@ service Main( config: undefined ) {
     }
 
     outputPort QuerySide {
-        location: config.QuerySide.location
+        location: config.QuerySide.locations._[0]
         protocol: http { format = "json" }
         interfaces:
             QuerySideInterface,
@@ -395,7 +389,7 @@ service Main( config: undefined ) {
     }
 
     inputPort ip {
-        location: config.Main.location
+        location: config.Main.locations._[0]
         protocol: http { format = "json" }
         aggregates:
           QuerySide,
@@ -414,8 +408,8 @@ service Main( config: undefined ) {
     }
 
     init {
-        global.debug = config.Main.debug
-        if(!is_defined(config.Main.docker) || !config.Test.docker) {
+        global.debug = config.Main.params.debug
+        if(is_defined(config.simulator) && config.simulator) {
             dependencies[0] << { service = "EventStore" filepath="monolith.ol" params -> config }
             dependencies[1] << { service = "CommandSide" filepath="monolith.ol" params -> config}
             dependencies[2] << { service = "QuerySide" filepath="monolith.ol" params -> config}
@@ -425,10 +419,7 @@ service Main( config: undefined ) {
                 loadEmbeddedService@runtime( service )()
                 printLoading
             }
-		    } /* else {
-          replaceAll@su( config.Test.location {regex = "localhost" replacement = "test" } )
-                       ( config.Test.location )
-        } */
+		    }
     }
 
     main {
@@ -439,7 +430,7 @@ service Main( config: undefined ) {
 service Test( config: undefined ) {
     execution: single
     outputPort EventStore {
-        location: "auto:json:EventStore.locations[0]:file:deployment.json"
+        location: config.EventStore.locations._[0]
         protocol: http { format = "json" } 
         interfaces:
             EventStoreInterface,
@@ -447,7 +438,7 @@ service Test( config: undefined ) {
     }
 
     outputPort CommandSide {
-        location: "auto:json:CommandSide.locations[0]:file:deployment.json"
+        location: config.CommandSide.locations._[0]
         protocol: http { format = "json" } 
         interfaces:
             CommandSideInterface,
@@ -455,7 +446,7 @@ service Test( config: undefined ) {
     }
 
     outputPort QuerySide {
-        location: "auto:json:QuerySide.locations[0]:file:deployment.json"
+        location: config.QuerySide.locations._[0]
         protocol: http { format = "json" }
         interfaces:
             QuerySideInterface,
@@ -466,12 +457,9 @@ service Test( config: undefined ) {
     embed Console as console
     embed StringUtils as su
     embed Runtime as runtime
-    // embed EventStore(config) in EventStore
-    // embed CommandSide(config) in CommandSide
-    // embed QuerySide(config) in QuerySide
 
     inputPort ip {
-        location: "auto:json:Test.locations:file:deployment.json"
+        location: config.Test.locations._[0]
         protocol: http { format = "json" }
         interfaces:
             NotificationInterface
@@ -484,8 +472,8 @@ service Test( config: undefined ) {
     }
 
     init {
-        global.debug = config.Test.debug
-        if(!is_defined(config.Test.docker) || !config.Test.docker) {
+        global.debug = config.Test.params.debug
+        if(is_defined(config.simulator) && config.simulator) {
             dependencies[0] << { service = "EventStore" filepath="monolith.ol" params -> config }
             dependencies[1] << { service = "CommandSide" filepath="monolith.ol" params -> config}
             // dependencies[2] << { service = "QuerySide" filepath="monolith.ol" params -> config}
@@ -495,16 +483,13 @@ service Test( config: undefined ) {
                 loadEmbeddedService@runtime( service )()
                 printLoading
             }
-		    } else {
-          replaceAll@su( config.Test.location {regex = "localhost" replacement = "test" } )
-                       ( config.Test.location )
-        }
+		    }
     }
 
     main {
         sleep@time( 1000 )()
         subscription << {
-            location = config.Test.location
+            location = config.Test.locations._[0]
             topics[0] = "PA_CREATED"
             topics[1] = "PA_DELETED"
         }
@@ -547,6 +532,7 @@ service Test( config: undefined ) {
         if( event.type != "PA_DELETED" || event.id != paid )
             throw( AssertionFailed )
 
+        unsubscribe@EventStore( subscription )( res )
         println@console( "Test passed." )()
     }
 }
