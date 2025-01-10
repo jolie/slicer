@@ -22,6 +22,7 @@ from file import File
 from json-utils import JsonUtils
 from runtime import Runtime
 from string-utils import StringUtils
+// from time import Time
 
 type SimulatorRequest {
   deployment: undefined
@@ -40,6 +41,7 @@ service Simulator {
   embed JsonUtils as json
   embed Runtime as runtime
 	embed StringUtils as str
+  // embed Time as time
 
   inputPort in {
     location: "local"
@@ -53,7 +55,9 @@ service Simulator {
           service -> request.simulate
           filepath -> request.program
           params -> request.deployment } )()
+      // FIXME: this cannot be removed and eventually triggers a request-response time-out
       linkIn( Exit )
+      // sleep@time( 2000 )()
     }
   }
 }
