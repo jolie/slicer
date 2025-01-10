@@ -22,24 +22,53 @@ from file import File
 from mustache import Mustache
 from string-utils import StringUtils
 
+
+type SlicerConfig: undefined
+type DeploymentConfig: undefined
+
+/* More spefic config types (pseudo-jolie syntax):
+
+type SlicerConfig {
+  ?"<service-name>": {
+    params: undefined
+    ports*: int( ranges([0,65535]) ) | string( enum(["internal"]) )
+  }
+}
+
+type DeploymentConfig {
+  simulator: bool
+  ?"<service-name>": {
+    params: undefined
+    locations*: string
+  }
+}
+*/
+
 type DeploymentConfigRequest {
-  slicerConfig: undefined
+  slicerConfig: SlicerConfig
   simulate: bool
 }
 
 type DockerfileRequest {
-  slicerConfig: undefined
+  slicerConfig: SlicerConfig
 }
+type Dockerfiles: undefined
+/*
+type Dockerfiles {
+  ?"<service-name>": string
+}
+*/
 
 type ComposefileRequest {
-  slicerConfig: undefined
+  slicerConfig: SlicerConfig
 }
+type Composefile: string
 
 interface ConfiguratorIface {
   RequestResponse:
-    produceDeploymentConfig( DeploymentConfigRequest )( undefined ),
-    produceDockerfiles( DockerfileRequest )( undefined ),
-    produceComposefile( ComposefileRequest )( string )
+    produceDeploymentConfig( DeploymentConfigRequest )( DeploymentConfig ),
+    produceDockerfiles( DockerfileRequest )( Dockerfiles ),
+    produceComposefile( ComposefileRequest )( Composefile )
 }
 
 constants {
@@ -69,11 +98,10 @@ service Configurator {
 
   main {
     [ produceDeploymentConfig( request )( response ){
-      // readFile@file( { filename = request.config  format = "json" } )( config )
       // produce deployment config from slicer.json
       config -> request.slicerConfig
       deployment << config
-      deployment.simulator = request.simulate
+      deployment.simulator = request.simulate || false
       foreach( service : config ) {
         undef( deployment.( service ).ports )
         toLowerCase@str( service )( host )
