@@ -37,7 +37,7 @@ constants {
   SLICER_USAGE = " <program_file> -c <config_file> [--slice <output_directory> | --simulate <service_name>]"
 }
 
-service Main {
+service Main( params: undefined ) {
   embed Configurator as cfg
 	embed Console as console
   embed File as file
@@ -51,6 +51,11 @@ service Main {
 		RequestResponse: run
 	}
 
+  outputPort launcher {
+    location: params.launcher.location
+    OneWay: done( undefined )
+  }
+
 	define printUsage {
 		if( !is_defined( __tool ) || !is_string( __tool ) ) {
       __tool = "jolieslicer"
@@ -59,101 +64,103 @@ service Main {
 	}
 
 	main {
-		run( launcherRequest )() {
-			scope( usage ) {
-				install( default =>
-							println@console( usage.( usage.default ) )();
-							__tool = launcherRequest;
-							printUsage
-						)
-				i = 0
-				while( i < #launcherRequest.args ) {
-					if( launcherRequest.args[i] == "--config" || launcherRequest.args[i] == "-c" ) {
-						slicerConfigFile = launcherRequest.args[++i]
-					} else if ( launcherRequest.args[i] == "--output" || launcherRequest.args[i] == "-o" ) {
-						outputDir = launcherRequest.args[++i]
-					} else if ( launcherRequest.args[i] == "--slice" ) {
-						outputDir = launcherRequest.args[++i]
-					} else if ( launcherRequest.args[i] == "--simulate" ) {
-            simulate = launcherRequest.args[++i] 
-					} else {
-						startsWith@str( launcherRequest.args[i] { prefix = "-" } )( isAnOption )
-						if( isAnOption ) {
-							throw( UnrecognizedOption, "Unrecognized option " + launcherRequest.args[i] )
-						} else if( is_defined( program ) ) {
-						    throw( ProgramAlreadySpecified,
-						           "Program file already specified (" +
-						            program + "): found " +
-						            launcherRequest.args[i] )
-						} else {
-							program = launcherRequest.args[i]
-						}
-					}
-					++i
-				}
-				if( !is_defined(slicerConfigFile) || !is_defined(program) ) {
-					throw( MissingArgument, "An argument is missing" )
-				} else if( !is_defined(simulate) && !is_defined(outputDir) ) {
-					throw( MissingArgument, "An argument is missing" )
-        }
-
-        runSimulator = is_defined(simulate)
-        readFile@file( { filename -> slicerConfigFile, format = "json" } )( slicerConfig )
-        produceDeploymentConfig@cfg( { slicerConfig -> slicerConfig, simulate = runSimulator } )
-                                   ( deployment )
-        if( runSimulator ) {
-          request.program -> program
-          request.simulate -> simulate
-          request.deployment -> deployment
-          run@simulator( request )()
-        } else if( is_defined( outputDir ) ) {
-          // Here we receive java exceptions from the slicer, so we print the stack trace instead
-          // install( default =>
-          //   		println@console( usage.( usage.default ).stackTrace )()
-          // )
-
-          // Produce sliced monolith
-          request.program -> program
-          request.outputDirectory -> outputDir
-          foreach( service: slicerConfig ){
-            request.services[#request.services] << service
-          }
-          slice@slicer( request )()
-
-          // Generate docker-compose
-          getFileSeparator@file()( FILE_SEPARATOR )
-          endsWith@str( outputDir { suffix -> FILE_SEPARATOR } )( hasSeparator )
-          if( !hasSeparator ) {
-            outputDir += FILE_SEPARATOR
-          }
-          produceComposefile@cfg( { slicerConfig -> slicerConfig } )( composefile )
-          writeFile@file( {
-              filename = outputDir + DOCKERCOMPOSE_FILENAME
-              content -> composefile } )()
-
-          // Generate service config.json
-          with( serviceConfig ){
-            getJsonString@json( deployment )( .content )
-            replaceAll@str( .content { regex = "\\\\" replacement = "" } )( .content )
-            replaceAll@str( .content {
-                regex = "([{},\\[\\]])([^,])"
-                replacement = "$1\n$2" } )( .content )
-          }
-          // Generate Dockerfile
-          produceDockerfiles@cfg( { slicerConfig -> slicerConfig } )( dockerfiles )
-
-          // Write config and dockerfiles
-          foreach( service: slicerConfig ) {
-            toLowerCase@str( service )( serviceDir )
-            serviceDir = outputDir + serviceDir + FILE_SEPARATOR
-            writeFile@file( {
-                filename = serviceDir + DOCKERFILE_FILENAME
-                content -> dockerfiles.(service) } )()
-            serviceConfig.filename = serviceDir + SERVICECONFIG_FILENAME
-            writeFile@file( serviceConfig )()
+    args -> params.args
+    scope( usage ) {
+      install( default =>
+            println@console( usage.( usage.default ) )();
+            __tool = launcherRequest;
+            printUsage
+            done@launcher()
+          )
+      i = 0
+      while( i < #args ) {
+        if( args[i] == "--config" || args[i] == "-c" ) {
+          slicerConfigFile = args[++i]
+        } else if ( args[i] == "--output" || args[i] == "-o" ) {
+          outputDir = args[++i]
+        } else if ( args[i] == "--slice" ) {
+          outputDir = args[++i]
+        } else if ( args[i] == "--simulate" ) {
+          simulate = args[++i] 
+        } else {
+          startsWith@str( args[i] { prefix = "-" } )( isAnOption )
+          if( isAnOption ) {
+            throw( UnrecognizedOption, "Unrecognized option " + args[i] )
+          } else if( is_defined( program ) ) {
+              throw( ProgramAlreadySpecified,
+                     "Program file already specified (" +
+                      program + "): found " +
+                      args[i] )
+          } else {
+            program = args[i]
           }
         }
+        ++i
       }
-		}
+      if( !is_defined(slicerConfigFile) || !is_defined(program) ) {
+        throw( MissingArgument, "An argument is missing" )
+      } else if( !is_defined(simulate) && !is_defined(outputDir) ) {
+        throw( MissingArgument, "An argument is missing" )
+      }
+
+      runSimulator = is_defined(simulate)
+      readFile@file( { filename -> slicerConfigFile, format = "json" } )( slicerConfig )
+      produceDeploymentConfig@cfg( { slicerConfig -> slicerConfig, simulate = runSimulator } )
+                                 ( deployment )
+      if( runSimulator ) {
+        request.program -> program
+        request.simulate -> simulate
+        request.deployment -> deployment
+        run@simulator( request )()
+        // linkIn( Exit )
+      } else if( is_defined( outputDir ) ) {
+        // Here we receive java exceptions from the slicer, so we print the stack trace instead
+        // install( default =>
+        //   		println@console( usage.( usage.default ).stackTrace )()
+        // )
+
+        // Produce sliced monolith
+        request.program -> program
+        request.outputDirectory -> outputDir
+        foreach( service: slicerConfig ){
+          request.services[#request.services] << service
+        }
+        slice@slicer( request )()
+
+        // Generate docker-compose
+        getFileSeparator@file()( FILE_SEPARATOR )
+        endsWith@str( outputDir { suffix -> FILE_SEPARATOR } )( hasSeparator )
+        if( !hasSeparator ) {
+          outputDir += FILE_SEPARATOR
+        }
+        produceComposefile@cfg( { slicerConfig -> slicerConfig } )( composefile )
+        writeFile@file( {
+            filename = outputDir + DOCKERCOMPOSE_FILENAME
+            content -> composefile } )()
+
+        // Generate service config.json
+        with( serviceConfig ){
+          getJsonString@json( deployment )( .content )
+          replaceAll@str( .content { regex = "\\\\" replacement = "" } )( .content )
+          replaceAll@str( .content {
+              regex = "([{},\\[\\]])([^,])"
+              replacement = "$1\n$2" } )( .content )
+        }
+        // Generate Dockerfile
+        produceDockerfiles@cfg( { slicerConfig -> slicerConfig } )( dockerfiles )
+
+        // Write config and dockerfiles
+        foreach( service: slicerConfig ) {
+          toLowerCase@str( service )( serviceDir )
+          serviceDir = outputDir + serviceDir + FILE_SEPARATOR
+          writeFile@file( {
+              filename = serviceDir + DOCKERFILE_FILENAME
+              content -> dockerfiles.(service) } )()
+          serviceConfig.filename = serviceDir + SERVICECONFIG_FILENAME
+          writeFile@file( serviceConfig )()
+        }
+        done@launcher()
+      }
+    }
 	}
 }

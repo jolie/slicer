@@ -22,6 +22,13 @@
 from runtime import Runtime
 from file import File
 service Launcher {
+  execution: single
+
+  inputPort callback {
+    location: "local"
+    OneWay: done( undefined )
+  }
+
 	outputPort wrapper {
 		RequestResponse: run
 	}
@@ -34,12 +41,14 @@ service Launcher {
 		getRealServiceDirectory@file()( home )
 		getFileSeparator@file()( sep )
 
+    getLocalLocation@runtime()( launcher.location )
+
 		loadLibrary@runtime( home + sep + "lib" + sep + "jolieslicer.jar" )()
 		loadEmbeddedService@runtime( {
 			filepath = home + sep + "main.ol"
 			service = "Main"
+      params << { args -> args, launcher -> launcher }
 		} )( wrapper.location )
-
-		run@wrapper( slicer { args -> args } )()
+    done( done )
 	}
 }
