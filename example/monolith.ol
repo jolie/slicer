@@ -333,6 +333,7 @@ service EventStore( config: undefined ) {
                 loc = subscriber.location
                 undef( global.topics.( topic ).subscribers.( loc ) )
             }
+            response = "OK"
         } ] { nullProcess }
         [ publishEvent( event ) ] {
             if( global.debug ) {
