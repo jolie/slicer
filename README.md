@@ -1,47 +1,91 @@
 # Jolie Slicer
-## About the slicer
-We propose Sliceable Monolith, a new methodology for developing microservice architectures and perform their integration testing by leveraging most of the simplicity of a monolith: a single codebase and a local execution environment that simulates distribution. Then, a tool compiles a codebase for each microservice and a cloud deployment configuration. The key enabler of our approach is the technology-agnostic service definition language offered by Jolie.
 
-## Download and setup the slicer
-The following steps require Jolie and Java 11 to be installed, there will be provided a step-by-step guide, in the end, describing how to set the Jolie development version up. 
+Jolie Slicer is the companion tool to the Sliceable Monolith[^1] development methodology.
 
-1) Clone Jolie Slicer GitHub repository at: https://github.com/jolie/slicer
-2) Change directory to the slicer, and download maven dependencies using the command “mvn install”
-3) Create the following symlinks to use the slicer in any location:
+The tool (`jolieslicer`) is available on npm:
+```bash
+npm install -g @jolie/slicer
 ```
-sudo ln -s /path/to/launcher.ol /usr/local/bin/slicer
-sudo ln -s /path/to/slicer/dist /path/to/slicer/lib
+Usage:
+```bash
+jolieslicer <monolith.ol> -c <slicer.json> [--slice <output_directory> | --simulate <service_name>]
 ```
-4) Might get errors because of access permissions, be sure to change them for "launcher.ol"
-```
-chmod +x launcher.ol
-```
-5) Success! The slicer should now be callable in any location on your system. Try calling "slicer" and it should print the usage information. 
+## Sliceable Monolith
 
-## How to use the slicer
-1) Requirements before slicing
+1. The entire microservices architecture is coded in a single Jolie file (`monolith.ol`):
+    1. Services are parameterised by their deployment configuration (`config`)
+    2. Input and Output ports are parameterized by their deployment location available under the path `config.ServiceName.locations`
 
-The slicer requires a Jolie file ("monolith.ol") containing all services and interfaces, along with a config.json file. The config file defines what services the user wants to extract from the monolith, which in the example beneath are Foo and Bar.
-```
-{
-    "Foo": {
-        "location" : "local://T"
-    },
-    "Bar": {
-        "location" : "local://CS"
+    As an example:
+    ```jolie
+    service Gateway( config ) {
+      inputPort ip {
+        location: config.Gateway.locations[0]
+        ...
+      }
+      outputPort CommandSide {
+        location: config.CommandSide.locations[0]
+        ...
+      }
+      main { ... }
     }
-}
-```
-2) Running the slicer
+    ```
 
-When the slicer has been set up, a monolith has been developed, and a config file has been created the slicer is ready to be used. Inside the folder with the monolith and config file, the user can use the following command to use the slicer:
-```
-slicer --config config.json monolith.ol
-```
+2. A configuration file (`slicer.json`) describes the services in the architecture and their ports:
+    ```json
+    {
+      "Gateway": {
+        "params": {},
+        "ports": [
+          8080
+        ]
+      },
+      "CommandSide": {
+        "params": {},
+        "ports": [
+          "internal"
+        ]
+      },
+      ...
+    }
+    ```
+    Services provide their functionality through one or more ports, each declared as either:
+    - *Internal* (`"internal"`) and accessible only by services in the same deployment
+    - *Exposed* (e.g., `8080`) and accessible by external clients through a TCP socket
 
-## Setting up jolie development version
-1) Clone jolie GitHub repository at: https://github.com/jolie/jolie
-2) Change directory to jolie/ and download maven dependencies using the command “mvn install”
-3) Download dev-setup for jolie by running the command: “./scripts/dev-setup.sh $YOUR_PATH”, where $YOUR_PATH e.g. could be /usr/local/bin
-4) Add "JOLIE_HOME=”/$YOUR_PATH/jolie-dist" to .bashrc
-5) Log in and out, should now be able to use "jolie --version" to see the current version
+3. The Jolie Slicer can now be used to either:
+    1. Run the microservices architecture as a single executable by specifying the name of the service that acts as the entry point of the application:
+        ```bash
+        jolieslicer monolith.ol -c slicer.json --simulate Gateway
+        ```
+    2. Slice the monolith into separate codebases, one for each service mentioned in the configuration (`slicer.json`):
+        ```bash
+        jolieslicer monolith.ol -c slicer.json --slice <output_directory>
+        ```
+        and a reasonable docker-compose configuration for the distributed deployment of the architecture:
+        ```bash
+        cd <output_directory> && docker compose up
+        ```
+
+## Example
+
+An example is provided under [`example/`](example/):
+- [`monolith.ol`](example/monolith.ol) implements a Sliceable Monolith
+- [`slicer.json`](example/slicer.json) is the Slicer configuration
+- [`microservices/`](example/microservices/) contains the result of slicing the monolith
+
+From within the direcotry `example`, one can:
+- Run the monolith as a single executable:
+    ```bash
+    jolieslicer monolith.ol -c slicer.json --simulate Main
+    ```
+- Run the service `Test` to locally execute an integration test:
+    ```bash
+    jolieslicer monolith.ol -c slicer.json --simulate Test
+    ```
+- Slice the monolith into separete codebases:
+    ```bash
+    jolieslicer monolith.ol -c slicer.json --slice microservices
+    ```
+
+[^1]:[Sliceable Monolith: Monolith First, Microservices Later](https://doi.org/10.1109/SCC53864.2021.00050)
