@@ -23,12 +23,12 @@
 from console import Console
 from file import File
 from json-utils import JsonUtils
+from runtime import Runtime
 from string-utils import StringUtils
 
 
 from .configurator import Configurator
 from .jolie-slicer import Slicer
-from .simulator import Simulator
 
 constants {
   DOCKERCOMPOSE_FILENAME = "docker-compose.yml",
@@ -42,7 +42,7 @@ service Main( params: undefined ) {
 	embed Console as console
   embed File as file
   embed JsonUtils as json
-	embed Simulator as simulator
+  embed Runtime as runtime
 	embed Slicer as slicer
 	embed StringUtils as str
 
@@ -108,11 +108,12 @@ service Main( params: undefined ) {
       produceDeploymentConfig@cfg( { slicerConfig -> slicerConfig, simulate = runSimulator } )
                                  ( deployment )
       if( runSimulator ) {
-        request.program -> program
-        request.simulate -> simulate
-        request.deployment -> deployment
-        run@simulator( request )()
-        // linkIn( Exit )
+        println@console( "---- RUNNING SERVICE " + request.simulate + " ----" )()
+        loadEmbeddedService@runtime( {
+            service -> simulate
+            filepath -> program
+            params -> deployment } )()
+        linkIn( Exit )
       } else if( is_defined( outputDir ) ) {
         // Here we receive java exceptions from the slicer, so we print the stack trace instead
         // install( default =>
@@ -141,6 +142,7 @@ service Main( params: undefined ) {
         // Generate service config.json
         with( serviceConfig ){
           getJsonString@json( deployment )( .content )
+          // Make the file a tiny bit more human-readble
           replaceAll@str( .content { regex = "\\\\" replacement = "" } )( .content )
           replaceAll@str( .content {
               regex = "([{},\\[\\]])([^,])"
