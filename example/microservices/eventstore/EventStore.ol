@@ -27,11 +27,11 @@ type PADeletedEvent: void {
 }
 type DomainEvent: PACreatedEvent | PAUpdatedEvent | PADeletedEvent
 interface ShutDownInterface {
-	OneWay:
+	oneWay:
 		shutDown( void )
 }
 interface NotificationInterface {
-	OneWay:
+	oneWay:
 		notify( DomainEvent )
 }
 type Topic: string
@@ -41,9 +41,9 @@ type Subscriber: void {
 }
 type SubscriptionResponse: string
 interface EventStoreInterface {
-	OneWay:
+	oneWay:
 		publishEvent( DomainEvent )
-	RequestResponse:
+	requestResponse:
 		subscribe( Subscriber )( SubscriptionResponse ),
 		unsubscribe( Subscriber )( string )
 }
@@ -56,7 +56,7 @@ service EventStore ( config : undefined ){
 		interfaces: NotificationInterface
 	}
 	inputPort IP {
-		location: config.EventStore.location
+		location: config.EventStore.locations._[0]
 		protocol: http{
 			format = "json"
 		}
@@ -67,7 +67,7 @@ service EventStore ( config : undefined ){
 	embed Console as C
 	embed StringUtils as S
 	init {
-		global.debug = config.EventStore.debug
+		global.debug = config.EventStore.params.debug
 	}
 	main {
 		[ subscribe( subscriber )( response ){
@@ -96,6 +96,7 @@ service EventStore ( config : undefined ){
 				loc = subscriber.location
 				undef( global.topics.( topic ).subscribers.( loc ) )
 			}
+			response = "OK"
 		} ]{
 			nullProcess
 		}

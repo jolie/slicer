@@ -31,13 +31,13 @@ type PADeletedEvent: void {
 }
 type DomainEvent: PACreatedEvent | PAUpdatedEvent | PADeletedEvent
 interface CommandSideInterface {
-	RequestResponse:
+	requestResponse:
 		updateParkingArea( ParkingArea )( string ),
 		deleteParkingArea( PAID )( string ),
 		createParkingArea( ParkingAreaInformation )( PAID )
 }
 interface ShutDownInterface {
-	OneWay:
+	oneWay:
 		shutDown( void )
 }
 type Topic: string
@@ -47,16 +47,16 @@ type Subscriber: void {
 }
 type SubscriptionResponse: string
 interface EventStoreInterface {
-	OneWay:
+	oneWay:
 		publishEvent( DomainEvent )
-	RequestResponse:
+	requestResponse:
 		subscribe( Subscriber )( SubscriptionResponse ),
 		unsubscribe( Subscriber )( string )
 }
 service CommandSide ( config : undefined ){
 	execution: concurrent
 	inputPort InputCommands {
-		location: config.CommandSide.location
+		location: config.CommandSide.locations._[0]
 		protocol: http{
 			format = "json"
 		}
@@ -65,7 +65,7 @@ service CommandSide ( config : undefined ){
 			ShutDownInterface
 	}
 	outputPort EventStore {
-		location: config.EventStore.location
+		location: config.EventStore.locations._[0]
 		protocol: http{
 			format = "json"
 		}
@@ -74,7 +74,7 @@ service CommandSide ( config : undefined ){
 	embed Console as C
 	embed StringUtils as S
 	init {
-		global.debug = config.CommandSide.debug
+		global.debug = config.CommandSide.params.debug
 	}
 	main {
 		[ createParkingArea( pa )( id ){

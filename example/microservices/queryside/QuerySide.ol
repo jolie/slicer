@@ -32,7 +32,7 @@ type PADeletedEvent: void {
 }
 type DomainEvent: PACreatedEvent | PAUpdatedEvent | PADeletedEvent
 interface ShutDownInterface {
-	OneWay:
+	oneWay:
 		shutDown( void )
 }
 type GetParkingAreaResponse: ParkingArea | string
@@ -41,12 +41,12 @@ type GetParkingAreasResponse: void {
 }
 type Location: int
 interface QuerySideInterface {
-	RequestResponse:
+	requestResponse:
 		getParkingArea( PAID )( GetParkingAreaResponse ),
 		getParkingAreas( Location )( GetParkingAreasResponse )
 }
 interface NotificationInterface {
-	OneWay:
+	oneWay:
 		notify( DomainEvent )
 }
 type Topic: string
@@ -56,16 +56,16 @@ type Subscriber: void {
 }
 type SubscriptionResponse: string
 interface EventStoreInterface {
-	OneWay:
+	oneWay:
 		publishEvent( DomainEvent )
-	RequestResponse:
+	requestResponse:
 		subscribe( Subscriber )( SubscriptionResponse ),
 		unsubscribe( Subscriber )( string )
 }
 service QuerySide ( config : undefined ){
 	execution: concurrent
 	inputPort InputQuery {
-		location: config.QuerySide.location
+		location: config.QuerySide.locations._[0]
 		protocol: http{
 			format = "json"
 		}
@@ -75,7 +75,7 @@ service QuerySide ( config : undefined ){
 			ShutDownInterface
 	}
 	outputPort EventStore {
-		location: config.EventStore.location
+		location: config.EventStore.locations._[0]
 		protocol: http{
 			format = "json"
 		}
@@ -85,12 +85,8 @@ service QuerySide ( config : undefined ){
 	embed StringUtils as S
 	embed Time as T
 	init {
-		global.debug = config.QuerySide.debug
-    if( is_defined( config.QuerySide.docker ) && config.QuerySide.docker ) {
-      replaceAll@S( config.QuerySide.location{regex = "localhost" replacement = "queryside"} )
-                   ( config.QuerySide.location )
-    }
-		subscriber.location = config.QuerySide.location
+		global.debug = config.QuerySide.params.debug
+		subscriber.location = config.QuerySide.locations._[0]
 		pushBackTopic[0]->subscriber.topics[#subscriber.topics]
 		pushBackTopic = "PA_CREATED"
 		pushBackTopic = "PA_UPDATED"

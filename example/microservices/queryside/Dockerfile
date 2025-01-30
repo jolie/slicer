@@ -1,4 +1,5 @@
-FROM jolielang/jolie
+FROM jolielang/jolie:1.12.1
 COPY QuerySide.ol .
-COPY config-docker.json .
-CMD ["jolie", "--params", "config-docker.json", "QuerySide.ol"]
+COPY config.json .
+EXPOSE 10000
+CMD ["jolie", "--params", "config.json", "QuerySide.ol"]

@@ -33,13 +33,13 @@ type PADeletedEvent: void {
 }
 type DomainEvent: PACreatedEvent | PAUpdatedEvent | PADeletedEvent
 interface CommandSideInterface {
-	RequestResponse:
+	requestResponse:
 		updateParkingArea( ParkingArea )( string ),
 		deleteParkingArea( PAID )( string ),
 		createParkingArea( ParkingAreaInformation )( PAID )
 }
 interface ShutDownInterface {
-	OneWay:
+	oneWay:
 		shutDown( void )
 }
 type GetParkingAreaResponse: ParkingArea | string
@@ -48,12 +48,12 @@ type GetParkingAreasResponse: void {
 }
 type Location: int
 interface QuerySideInterface {
-	RequestResponse:
+	requestResponse:
 		getParkingArea( PAID )( GetParkingAreaResponse ),
 		getParkingAreas( Location )( GetParkingAreasResponse )
 }
 interface NotificationInterface {
-	OneWay:
+	oneWay:
 		notify( DomainEvent )
 }
 type Topic: string
@@ -63,15 +63,16 @@ type Subscriber: void {
 }
 type SubscriptionResponse: string
 interface EventStoreInterface {
-	OneWay:
+	oneWay:
 		publishEvent( DomainEvent )
-	RequestResponse:
+	requestResponse:
 		subscribe( Subscriber )( SubscriptionResponse ),
 		unsubscribe( Subscriber )( string )
 }
 service Test ( config : undefined ){
+	execution: single
 	outputPort EventStore {
-		location: config.EventStore.location
+		location: config.EventStore.locations._[0]
 		protocol: http{
 			format = "json"
 		}
@@ -80,7 +81,7 @@ service Test ( config : undefined ){
 			ShutDownInterface
 	}
 	outputPort CommandSide {
-		location: config.CommandSide.location
+		location: config.CommandSide.locations._[0]
 		protocol: http{
 			format = "json"
 		}
@@ -89,7 +90,7 @@ service Test ( config : undefined ){
 			ShutDownInterface
 	}
 	outputPort QuerySide {
-		location: config.QuerySide.location
+		location: config.QuerySide.locations._[0]
 		protocol: http{
 			format = "json"
 		}
@@ -102,7 +103,7 @@ service Test ( config : undefined ){
 	embed StringUtils as su
 	embed Runtime as runtime
 	inputPort ip {
-		location: config.Test.location
+		location: config.Test.locations._[0]
 		protocol: http{
 			format = "json"
 		}
@@ -117,8 +118,8 @@ service Test ( config : undefined ){
 		println@console( "done!" )(  )
 	}
 	init {
-		global.debug = config.Test.debug
-		if( !is_defined( config.Test.docker ) || !config.Test.docker ){
+		global.debug = config.Test.params.debug
+		if( is_defined( config.simulator ) && config.simulator ){
 			dependencies[0] << {
 				service = "EventStore"
 				filepath = "monolith.ol"
@@ -135,14 +136,12 @@ service Test ( config : undefined ){
 				loadEmbeddedService@runtime( service )(  )
 				printLoading
 			}
-		} else {
-      replaceAll@su( config.Test.location { regex = "localhost" replacement = "test" } )( config.Test.location )
-    }
+		}
 	}
 	main {
 		sleep@time( 1000 )(  )
 		subscription << {
-			location = config.Test.location
+			location = config.Test.locations._[0]
 			topics[0] = "PA_CREATED"
 			topics[1] = "PA_DELETED"
 		}
@@ -188,6 +187,7 @@ service Test ( config : undefined ){
 		if( event.type != "PA_DELETED" || event.id != paid ){
 			throw( AssertionFailed )
 		}
+		unsubscribe@EventStore( subscription )( res )
 		println@console( "Test passed." )(  )
 	}
 }
