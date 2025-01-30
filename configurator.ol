@@ -139,9 +139,10 @@ service Configurator {
       foreach( service: config ) {
         render.data.service_file = service + JOLIE_EXTENSION
         for( i = 0, i < #config.( service ).ports, i++ ) {
-          render.data.ports[#render.data.ports] = BASE_PORT + i++
+          render.data.ports[#render.data.ports] = BASE_PORT + i
         }
         render@mst( render )( response.( service ) )
+        undef( render.data.ports )
       }
     } ]
     [ produceComposefile( request )( response ){
