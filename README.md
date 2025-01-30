@@ -14,17 +14,17 @@ jolieslicer <monolith.ol> -c <slicer.json> [--slice <output_directory> | --simul
 
 1. The entire microservices architecture is coded in a single Jolie file (`monolith.ol`):
     1. Services are parameterised by their deployment configuration (`config`)
-    2. Input and Output ports are parameterized by their deployment location available under the path `config.ServiceName.locations`
+    2. Input and Output ports are parameterized by their deployment location available under the path `config.ServiceName.locations._`
 
     As an example:
     ```jolie
     service Gateway( config ) {
       inputPort ip {
-        location: config.Gateway.locations[0]
+        location: config.Gateway.locations._[0]
         ...
       }
       outputPort CommandSide {
-        location: config.CommandSide.locations[0]
+        location: config.CommandSide.locations._[0]
         ...
       }
       main { ... }
