@@ -2,8 +2,8 @@
 
 /*
  * Copyright (C) 2021 Fabrizio Montesi <famontesi@gmail.com>
- * Copyright (C) 2021 Marco Peressotti
  * Copyright (C) 2021 Valentino Picotti
+ * Copyright (C) 2021 Marco Peressotti
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -30,19 +30,23 @@ from string-utils import StringUtils
 
 from .jolie-slicer import Slicer
 
+// configuration constants (edit with care)
+constants {
+  APP_NAME = "jolieslicer",
+  APP_VERSION = "0.1.6",
+  JOLIE_VERSION = "1.13.1",
+  DEFAULT_BASE_PORT = 10000,
+  DEFAULT_TEMPLATES_DIR = "/templates/",
+  DOCKER_TEMPLATE ="Dockerfile.mustache",
+  COMPOSE_TEMPLATE ="docker-compose.mustache",
+  SERVICE_PARAMFILE = "config.json",
+}
+
+// program constants
 constants {
   MODE_SLICE = "slice",
   MODE_SIMULATE = "simulate",
   INTERNAL = "internal"
-}
-
-constants {
-  BASE_PORT = 10000,
-  TEMPLATES_DIR = "/templates/",
-  DOCKER_TEMPLATE ="Dockerfile.mustache",
-  COMPOSE_TEMPLATE ="docker-compose.mustache",
-  SERVICE_PARAMFILE = "config.json",
-  JOLIE_VERSION = "1.13.1"
 }
 
 service Launcher {
@@ -55,17 +59,44 @@ service Launcher {
 	embed StringUtils as str
 	embed Slicer as slicer
 
+  define printUsage {
+    println@console( fmt@str("{name} {version}
+
+usage: {name} application configuration [options]
+
+description: {name} is a command line tool to support the development of Jolie applications following the the Sliceable Monolith development methodology. This tool allows to run a sliceable monolith application locally (via the --run option) or to slice it into a set of services (with --slice) that can be run in a containerized environment, such as Docker.
+
+arguments:
+  application: the Jolie application to run or slice
+  configuration: the application configuration file in JSON format
+
+options:
+  -s, --slice output_dir  Slice the application and write the output to the specified directory
+  --run                   Runs the application locally
+  --base-port port        Base port for internal services (default: {defaultBasePort})
+  --templates path        Custom templates
+  -h, --help              Show this help message"{
+      name = APP_NAME,
+      version = APP_VERSION
+      defaultBasePort = DEFAULT_BASE_PORT,
+    } ) )()
+  }
+
   main {
     //-------------------------------------------------------------------
     // parse command line arguments
     scope( usage ) {
-      install( default =>
-        println@console( usage.( usage.default ) )();
-        println@console( "Usage: jolieslicer <program_file> <config_file> [--slice <output_directory> | --simulate <service_name>]" )()
-        exit
+      install( Help =>
+          printUsage
+          halt@runtime( { status = 0 } )( )
       )
-      if ( #args == 0 ) {
-        throw(UsageError, "Program file not specified" )
+      install( default =>
+          println@console( usage.( usage.default ) +"\n" )()
+          printUsage
+          halt@runtime( { status = 1 } )( )
+      )
+      if (#args == 0 || args[0] == "--help" || args[0] == "-h") {
+        throw( Help )
       }
       params.programFile = args[0]
       if ( #args == 1 ) {
@@ -79,7 +110,7 @@ service Launcher {
             throw(UsageError, "--slice can be specified only once" )
           }
           if ( params.mode == MODE_SIMULATE ) {
-            throw(UsageError, "--slice and --simulate cannot be both specified" )
+            throw(UsageError, "--slice and --run cannot be both specified" )
           }
           i += 1
           if ( #args == i ) {
@@ -87,12 +118,12 @@ service Launcher {
           }
           params.mode = MODE_SLICE
           params.outputDir = args[i]
-        } else if ( args[i] == "--simulate") {
+        } else if ( args[i] == "--run") {
           if ( params.mode == MODE_SIMULATE ) {
             throw(UsageError, "--slice can be specified only once" )
           }
           if ( params.mode == MODE_SLICE ) {
-            throw(UsageError, "--slice and --simulate cannot be both specified" )
+            throw(UsageError, "--slice and --run cannot be both specified" )
           }
           params.mode = MODE_SIMULATE
         } else if ( args[i] == "--base-port") {
@@ -109,19 +140,21 @@ service Launcher {
           }
         // } else if ( args[i] == "--no-overwrite" ) {
         //   params.no_overwrite = true
+        } else if (args[i] == "--help" || args[i] == "-h") {
+          throw( help )
         } else {
           throw(UsageError, "Invalid argument: " + args[i] + "." )
         }
         i += 1
       }
       if (!is_defined( params.mode ) ) {
-        throw(UsageError, "Missing argument: --slice or --simulate must be specified." )
+        throw(UsageError, "Missing argument: --slice or --run must be specified." )
       }
       if (!is_defined( params.basePort ) ) {
-        params.basePort = BASE_PORT
+        params.basePort = DEFAULT_BASE_PORT
       }
       if (!is_defined( params.templatesDir ) ) {
-        params.templatesDir = getRealServiceDirectory@file() + TEMPLATES_DIR
+        params.templatesDir = getRealServiceDirectory@file() + DEFAULT_TEMPLATES_DIR
       }
       // ensure templates and output directory ends with file separator
       getFileSeparator@file()( FILE_SEPARATOR )

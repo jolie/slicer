@@ -473,14 +473,25 @@ service Test( config: undefined ) {
             NotificationInterface
     }
 
+    init {
+        // defaults
+        params << {
+            delay = 1000
+            debug = false
+        }
+        // overwrite with config params
+        params << config.Test.params
+        global.params -> params
+    }
+
     main {
-        sleep@time( 1000 )()
+        sleep@time( params.delay )()
         subscription << {
             location = config.Test.locations[0]
             topics[0] = "PA_CREATED"
             topics[1] = "PA_DELETED"
         }
-        if( debug ){
+        if( params.debug ){
             println@console( "Subscribing as:" )()
             valueToPrettyString@su( subscription )( dbg )
             println@console( dbg )()
@@ -491,14 +502,14 @@ service Test( config: undefined ) {
             chargingSpeed = "FAST"
             availability[0] << { start = 8 end = 13 }
         }
-        if( debug ){
+        if( params.debug ){
             println@console( "Creating Parking Area:" )()
             valueToPrettyString@su( parkingArea )( dbg )
             println@console( dbg )()
         }
         createParkingArea@CommandSide( parkingArea )( paid )
         notify( event )
-        if( debug ){
+        if( params.debug ){
             println@console( "Received Event:" )()
             valueToPrettyString@su( event )( dbg )
             println@console( dbg )()
@@ -506,12 +517,12 @@ service Test( config: undefined ) {
         if( event.type != "PA_CREATED" || event.id != paid )
             throw( AssertionFailed )
 
-        if( debug ){
+        if( params.debug ){
             println@console( "Deleting Parking Area with ID: " + paid )()
         }
         deleteParkingArea@CommandSide( paid )()
         notify( event )
-        if( debug ){
+        if( params.debug ){
             println@console( "Received Event:" )()
             valueToPrettyString@su( event )( dbg )
             println@console( dbg )()
