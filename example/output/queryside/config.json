@@ -1,0 +1,1 @@
+{"QuerySide":{"locations":"socket:\/\/queryside:10000","params":null},"CommandSide":{"locations":["socket:\/\/commandside:10000","socket:\/\/commandside:8080"]},"EventStore":{"locations":"socket:\/\/eventstore:10000"},"Test":{"locations":"socket:\/\/test:10000"},"Main":{"locations":"socket:\/\/main:10000"}}

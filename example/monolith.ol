@@ -59,16 +59,23 @@ interface ShutDownInterface {
 service CommandSide( config : undefined ) {
     execution: concurrent
 
-    inputPort InputCommands {
-        location: config.CommandSide.locations._[0]
+    inputPort InternalCommands {
+        location: config.CommandSide.locations[0]
         protocol: http { format = "json" } 
         interfaces:
             CommandSideInterface,
             ShutDownInterface
     }
 
+    inputPort ExternalCommands {
+        location: config.CommandSide.locations[1]
+        protocol: http { format = "json" } 
+        interfaces:
+            CommandSideInterface
+    }
+
     outputPort EventStore {
-        location: config.EventStore.locations._[0]
+        location: config.EventStore.locations[0]
         protocol: http { format = "json" } 
         interfaces: EventStoreInterface
     }
@@ -77,7 +84,7 @@ service CommandSide( config : undefined ) {
     embed Console as C
     embed StringUtils as S
 
-    init { global.debug = config.CommandSide.params.debug }
+    init { debug = config.CommandSide.params.debug }
 
     main {
         [ createParkingArea( pa )( id )
@@ -91,7 +98,7 @@ service CommandSide( config : undefined ) {
               }
           }
         ] {
-              if( global.debug ){
+              if( debug ){
                   valueToPrettyString@S( pa )( str )
                   println@C( "UPDATED: " + str )()
               }
@@ -114,7 +121,7 @@ service CommandSide( config : undefined ) {
         ] {
               event.type = "PA_UPDATED";
               event << pa
-              if( global.debug ){
+              if( debug ){
                   valueToPrettyString@S( pa )( str )
                   println@C( "UPDATED: " + str )()
               }
@@ -163,7 +170,7 @@ service QuerySide( config: undefined ) {
     execution: concurrent
 
     inputPort InputQuery {
-        location: config.QuerySide.locations._[0]
+        location: config.QuerySide.locations[0]
         protocol: http { format = "json" } 
         interfaces:
             QuerySideInterface,
@@ -178,7 +185,7 @@ service QuerySide( config: undefined ) {
     // }
 
     outputPort EventStore {
-        location: config.EventStore.locations._[0]
+        location: config.EventStore.locations[0]
         protocol: http { format = "json" } 
         interfaces: EventStoreInterface
     }
@@ -190,14 +197,14 @@ service QuerySide( config: undefined ) {
     embed Time as T
 
     init {
-        global.debug = config.QuerySide.params.debug
-        subscriber.location = config.QuerySide.locations._[0]
+        debug = config.QuerySide.params.debug
+        subscriber.location = config.QuerySide.locations[0]
         pushBackTopic -> subscriber.topics[#subscriber.topics]
         pushBackTopic = "PA_CREATED"
         pushBackTopic = "PA_UPDATED"
         pushBackTopic = "PA_DELETED"
 
-        if( global.debug ){
+        if( debug ){
             valueToPrettyString@S( subscriber )( str )
             println@C( str )()
         }
@@ -240,7 +247,7 @@ service QuerySide( config: undefined ) {
             }
         } ] { nullProcess }
         [ notify( event ) ] {
-            if( global.debug ) {
+            if( debug ) {
                 valueToPrettyString@S( event )( str )
                 println@C( "Notified of: " + str)()
             }
@@ -291,7 +298,7 @@ service EventStore( config: undefined ) {
     }
 
     inputPort IP {
-        location: config.EventStore.locations._[0]
+        location: config.EventStore.locations[0]
         protocol: http { format = "json" } 
         interfaces:
             EventStoreInterface, ShutDownInterface
@@ -300,11 +307,11 @@ service EventStore( config: undefined ) {
     embed Console as C
     embed StringUtils as S
 
-    init { global.debug = config.EventStore.params.debug }
+    init { debug = config.EventStore.params.debug }
 
     main {
         [ subscribe( subscriber )( response ) {
-            if( global.debug ) {
+            if( debug ) {
                 valueToPrettyString@S( subscriber )( str )
                 println@C( "Subscription: " + str )()
             }
@@ -321,7 +328,7 @@ service EventStore( config: undefined ) {
                     }
                 } */
             }
-            if( global.debug ) {
+            if( debug ) {
                 valueToPrettyString@S( global.topics )( str )
                 println@C( "State of topics variable: " )()
                 println@C( str )()
@@ -336,7 +343,7 @@ service EventStore( config: undefined ) {
             response = "OK"
         } ] { nullProcess }
         [ publishEvent( event ) ] {
-            if( global.debug ) {
+            if( debug ) {
                 valueToPrettyString@S( event )( str )
                 println@C( "Received event " + str )()
             }
@@ -345,7 +352,7 @@ service EventStore( config: undefined ) {
                 pushBack -> eventsArray[#eventsArray]
                 pushBack << event
             }
-            if( global.debug ) {
+            if( debug ) {
                 valueToPrettyString@S( eventsArray )( str )
                 println@C( "Events Array: " + str )()
             }
@@ -366,7 +373,7 @@ service EventStore( config: undefined ) {
 
 service Main( config: undefined ) {
     outputPort EventStore {
-        location: config.EventStore.locations._[0]
+        location: config.EventStore.locations[0]
         protocol: http { format = "json" }
         interfaces:
             EventStoreInterface,
@@ -374,7 +381,7 @@ service Main( config: undefined ) {
     }
 
     outputPort CommandSide {
-        location: config.CommandSide.locations._[0]
+        location: config.CommandSide.locations[0]
         protocol: http { format = "json" }
         interfaces:
             CommandSideInterface,
@@ -382,7 +389,7 @@ service Main( config: undefined ) {
     }
 
     outputPort QuerySide {
-        location: config.QuerySide.locations._[0]
+        location: config.QuerySide.locations[0]
         protocol: http { format = "json" }
         interfaces:
             QuerySideInterface,
@@ -390,7 +397,7 @@ service Main( config: undefined ) {
     }
 
     inputPort ip {
-        location: config.Main.locations._[0]
+        location: config.Main.locations[0]
         protocol: http { format = "json" }
         aggregates:
           QuerySide,
@@ -409,7 +416,7 @@ service Main( config: undefined ) {
     }
 
     init {
-        global.debug = config.Main.params.debug
+        debug = config.Main.params.debug
         if(is_defined(config.simulator) && config.simulator) {
             dependencies[0] << { service = "EventStore" filepath="monolith.ol" params -> config }
             dependencies[1] << { service = "CommandSide" filepath="monolith.ol" params -> config}
@@ -431,7 +438,7 @@ service Main( config: undefined ) {
 service Test( config: undefined ) {
     execution: single
     outputPort EventStore {
-        location: config.EventStore.locations._[0]
+        location: config.EventStore.locations[0]
         protocol: http { format = "json" } 
         interfaces:
             EventStoreInterface,
@@ -439,7 +446,7 @@ service Test( config: undefined ) {
     }
 
     outputPort CommandSide {
-        location: config.CommandSide.locations._[0]
+        location: config.CommandSide.locations[0]
         protocol: http { format = "json" } 
         interfaces:
             CommandSideInterface,
@@ -447,7 +454,7 @@ service Test( config: undefined ) {
     }
 
     outputPort QuerySide {
-        location: config.QuerySide.locations._[0]
+        location: config.QuerySide.locations[0]
         protocol: http { format = "json" }
         interfaces:
             QuerySideInterface,
@@ -460,41 +467,20 @@ service Test( config: undefined ) {
     embed Runtime as runtime
 
     inputPort ip {
-        location: config.Test.locations._[0]
+        location: config.Test.locations[0]
         protocol: http { format = "json" }
         interfaces:
             NotificationInterface
     }
 
-    define printLoading {
-        for(i=0,i<3,i++){sleep@time(200)();print@console(". ")()}
-        sleep@time(200)()
-        println@console( "done!" )()
-    }
-
-    init {
-        global.debug = config.Test.params.debug
-        if(is_defined(config.simulator) && config.simulator) {
-            dependencies[0] << { service = "EventStore" filepath="monolith.ol" params -> config }
-            dependencies[1] << { service = "CommandSide" filepath="monolith.ol" params -> config}
-            // dependencies[2] << { service = "QuerySide" filepath="monolith.ol" params -> config}
-            println@console( "---- EMBEDDING DEPENDENCIES ----" )()
-            for( service in dependencies ) {
-                print@console( "Embedding " + service.service + ": " )()
-                loadEmbeddedService@runtime( service )()
-                printLoading
-            }
-		    }
-    }
-
     main {
         sleep@time( 1000 )()
         subscription << {
-            location = config.Test.locations._[0]
+            location = config.Test.locations[0]
             topics[0] = "PA_CREATED"
             topics[1] = "PA_DELETED"
         }
-        if( global.debug ){
+        if( debug ){
             println@console( "Subscribing as:" )()
             valueToPrettyString@su( subscription )( dbg )
             println@console( dbg )()
@@ -505,14 +491,14 @@ service Test( config: undefined ) {
             chargingSpeed = "FAST"
             availability[0] << { start = 8 end = 13 }
         }
-        if( global.debug ){
+        if( debug ){
             println@console( "Creating Parking Area:" )()
             valueToPrettyString@su( parkingArea )( dbg )
             println@console( dbg )()
         }
         createParkingArea@CommandSide( parkingArea )( paid )
         notify( event )
-        if( global.debug ){
+        if( debug ){
             println@console( "Received Event:" )()
             valueToPrettyString@su( event )( dbg )
             println@console( dbg )()
@@ -520,12 +506,12 @@ service Test( config: undefined ) {
         if( event.type != "PA_CREATED" || event.id != paid )
             throw( AssertionFailed )
 
-        if( global.debug ){
+        if( debug ){
             println@console( "Deleting Parking Area with ID: " + paid )()
         }
         deleteParkingArea@CommandSide( paid )()
         notify( event )
-        if( global.debug ){
+        if( debug ){
             println@console( "Received Event:" )()
             valueToPrettyString@su( event )( dbg )
             println@console( dbg )()

@@ -56,7 +56,7 @@ service EventStore ( config : undefined ){
 		interfaces: NotificationInterface
 	}
 	inputPort IP {
-		location: config.EventStore.locations._[0]
+		location: config.EventStore.locations[0]
 		protocol: http{
 			format = "json"
 		}
@@ -67,11 +67,11 @@ service EventStore ( config : undefined ){
 	embed Console as C
 	embed StringUtils as S
 	init {
-		global.debug = config.EventStore.params.debug
+		debug = config.EventStore.params.debug
 	}
 	main {
 		[ subscribe( subscriber )( response ){
-			if( global.debug ){
+			if( debug ){
 				valueToPrettyString@S( subscriber )( str )
 				println@C( "Subscription: " + str )(  )
 			}
@@ -82,7 +82,7 @@ service EventStore ( config : undefined ){
 					thisTopic.subscribers.( loc ) = loc
 				}
 			}
-			if( global.debug ){
+			if( debug ){
 				valueToPrettyString@S( global.topics )( str )
 				println@C( "State of topics variable: " )(  )
 				println@C( str )(  )
@@ -101,7 +101,7 @@ service EventStore ( config : undefined ){
 			nullProcess
 		}
 		[ publishEvent( event ) ]{
-			if( global.debug ){
+			if( debug ){
 				valueToPrettyString@S( event )( str )
 				println@C( "Received event " + str )(  )
 			}
@@ -110,7 +110,7 @@ service EventStore ( config : undefined ){
 				pushBack[0]->eventsArray[#eventsArray]
 				pushBack << event
 			}
-			if( global.debug ){
+			if( debug ){
 				valueToPrettyString@S( eventsArray )( str )
 				println@C( "Events Array: " + str )(  )
 			}

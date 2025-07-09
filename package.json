@@ -1,5 +1,5 @@
 {
-  "version": "0.1.5",
+  "version": "0.1.6",
   "repo": "https://github.com/jolie/slicer",
   "name": "@jolie/slicer",
   "description": "A slicer for Jolie modules",
@@ -11,6 +11,10 @@
       "name": "Fabrizio Montesi",
       "email": "famontesi@gmail.com",
       "url": "https://www.fabriziomontesi.com"
+    },
+    {
+      "name": "Marco Peressotti",
+      "url": "https://marcoperessotti.com"
     }
   ],
   "bin": {

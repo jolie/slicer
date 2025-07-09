@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2024 Valentino Picotti
+ * Copyright (C) 2021 Marco Peressotti
+ * Copyright (C) 2021 Valentino Picotti
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,7 +24,7 @@ from file import FileNotFoundType
 
 type SliceRequest: void {
 	program: string
-	outputDirectory : string
+	outputDirectory : string{?}
   services*: string
 }
 

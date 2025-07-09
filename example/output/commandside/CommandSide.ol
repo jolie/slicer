@@ -55,8 +55,8 @@ interface EventStoreInterface {
 }
 service CommandSide ( config : undefined ){
 	execution: concurrent
-	inputPort InputCommands {
-		location: config.CommandSide.locations._[0]
+	inputPort InternalCommands {
+		location: config.CommandSide.locations[0]
 		protocol: http{
 			format = "json"
 		}
@@ -64,8 +64,15 @@ service CommandSide ( config : undefined ){
 			CommandSideInterface,
 			ShutDownInterface
 	}
+	inputPort ExternalCommands {
+		location: config.CommandSide.locations[1]
+		protocol: http{
+			format = "json"
+		}
+		interfaces: CommandSideInterface
+	}
 	outputPort EventStore {
-		location: config.EventStore.locations._[0]
+		location: config.EventStore.locations[0]
 		protocol: http{
 			format = "json"
 		}
@@ -74,7 +81,7 @@ service CommandSide ( config : undefined ){
 	embed Console as C
 	embed StringUtils as S
 	init {
-		global.debug = config.CommandSide.params.debug
+		debug = config.CommandSide.params.debug
 	}
 	main {
 		[ createParkingArea( pa )( id ){
@@ -84,7 +91,7 @@ service CommandSide ( config : undefined ){
 				global.db[id].info << pa
 			}
 		} ]{
-			if( global.debug ){
+			if( debug ){
 				valueToPrettyString@S( pa )( str )
 				println@C( "UPDATED: " + str )(  )
 			}
@@ -104,7 +111,7 @@ service CommandSide ( config : undefined ){
 		} ]{
 			event.type = "PA_UPDATED"
 			event << pa
-			if( global.debug ){
+			if( debug ){
 				valueToPrettyString@S( pa )( str )
 				println@C( "UPDATED: " + str )(  )
 			}
