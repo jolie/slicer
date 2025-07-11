@@ -5,7 +5,7 @@
   <groupId>org.jolie-lang</groupId>
   <artifactId>jolieslicer</artifactId>
   <packaging>jar</packaging>
-  <version>0.1.0</version>
+  <version>0.1.6</version>
 
 	<name>jolieslicer</name>
 	<url>https://github.com/jolie/slicer</url>
@@ -14,9 +14,9 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>11</maven.compiler.source>
-    <maven.compiler.target>11</maven.compiler.target>
-		<jolie.version>1.11.2</jolie.version>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.release>21</maven.compiler.release>
+    <jolie.version>1.13.1</jolie.version>
     <!-- jar files destinations -->
     <outDir>lib</outDir>
   </properties>
@@ -51,6 +51,11 @@
   <build>
     <plugins>
       <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.14.0</version> 
+      </plugin>
+      <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
         <executions>
           <execution>
@@ -71,7 +76,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
-        <version>3.0.2</version>
+        <version>3.4.2</version>
         <executions>
           <execution>
             <id>default-jar</id>

@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2024 Valentino Picotti
+ * Copyright (C) 2021 Valentino Picotti
+ * Copyright (C) 2021 Marco Peressotti
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -17,15 +18,15 @@
  * MA 02110-1301  USA
  */
 
+type SliceRequest: void {
+  program: string
+  outputDirectory : string{?}
+  services*: string
+}
+
 from types.JavaException import JavaExceptionType, WeakJavaExceptionType
 from types.IOException import IOExceptionType
 from file import FileNotFoundType
-
-type SliceRequest: void {
-	program: string
-	outputDirectory : string
-  services*: string
-}
 
 interface SlicerInterface {
 RequestResponse:
@@ -37,6 +38,7 @@ RequestResponse:
 }
 
 service Slicer {
+  
 	inputPort ip {
 		location: "local"
 		interfaces: SlicerInterface
@@ -45,4 +47,5 @@ service Slicer {
 	foreign java {
 		class: "joliex.slicer.JolieSlicer"
 	}
+
 }

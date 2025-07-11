@@ -59,25 +59,32 @@ interface ShutDownInterface {
 service CommandSide( config : undefined ) {
     execution: concurrent
 
-    inputPort InputCommands {
-        location: config.CommandSide.locations._[0]
+    inputPort InternalCommands {
+        location: config.CommandSide.locations[0]
         protocol: http { format = "json" } 
         interfaces:
             CommandSideInterface,
             ShutDownInterface
     }
 
+    inputPort ExternalCommands {
+        location: config.CommandSide.locations[1]
+        protocol: http { format = "json" } 
+        interfaces:
+            CommandSideInterface
+    }
+
     outputPort EventStore {
-        location: config.EventStore.locations._[0]
+        location: config.EventStore.locations[0]
         protocol: http { format = "json" } 
         interfaces: EventStoreInterface
     }
 
     // embed EventStore in EventStore
-    embed Console as C
-    embed StringUtils as S
+    embed Console as console
+    embed StringUtils as stringUtils
 
-    init { global.debug = config.CommandSide.params.debug }
+    init { debug = config.CommandSide.params.debug }
 
     main {
         [ createParkingArea( pa )( id )
@@ -91,9 +98,9 @@ service CommandSide( config : undefined ) {
               }
           }
         ] {
-              if( global.debug ){
-                  valueToPrettyString@S( pa )( str )
-                  println@C( "UPDATED: " + str )()
+              if( debug ){
+                  valueToPrettyString@stringUtils( pa )( str )
+                  println@console( "UPDATED: " + str )()
               }
               synchronized( dbToken ) {
                   event.type = "PA_CREATED"
@@ -102,8 +109,8 @@ service CommandSide( config : undefined ) {
               publishEvent@EventStore( event )
           }
         [ updateParkingArea( pa )( r ){
-              valueToPrettyString@S( pa )( str )
-              println@C( "UPDATED: " + str )()
+              valueToPrettyString@stringUtils( pa )( str )
+              println@console( "UPDATED: " + str )()
               synchronized( dbToken ) {
                   with( global.db[pa.id] ) {
                       .info << pa.info
@@ -114,9 +121,9 @@ service CommandSide( config : undefined ) {
         ] {
               event.type = "PA_UPDATED";
               event << pa
-              if( global.debug ){
-                  valueToPrettyString@S( pa )( str )
-                  println@C( "UPDATED: " + str )()
+              if( debug ){
+                  valueToPrettyString@stringUtils( pa )( str )
+                  println@console( "UPDATED: " + str )()
               }
               publishEvent@EventStore( event )
         }
@@ -134,7 +141,7 @@ service CommandSide( config : undefined ) {
               publishEvent@EventStore( event )
         }
         [ shutDown( void ) ]{
-              println@C( "Shutting down" )()
+              println@console( "Shutting down" )()
               exit
           }
     }
@@ -163,7 +170,7 @@ service QuerySide( config: undefined ) {
     execution: concurrent
 
     inputPort InputQuery {
-        location: config.QuerySide.locations._[0]
+        location: config.QuerySide.locations[0]
         protocol: http { format = "json" } 
         interfaces:
             QuerySideInterface,
@@ -178,40 +185,40 @@ service QuerySide( config: undefined ) {
     // }
 
     outputPort EventStore {
-        location: config.EventStore.locations._[0]
+        location: config.EventStore.locations[0]
         protocol: http { format = "json" } 
         interfaces: EventStoreInterface
     }
 
     // embed Runtime as Runtime
     // embed EventStore in EventStore
-    embed Console as C
-    embed StringUtils as S
-    embed Time as T
+    embed Console as console
+    embed StringUtils as stringUtils
+    embed Time as time
+    embed Runtime as runtime
 
     init {
-        global.debug = config.QuerySide.params.debug
-        subscriber.location = config.QuerySide.locations._[0]
-        pushBackTopic -> subscriber.topics[#subscriber.topics]
-        pushBackTopic = "PA_CREATED"
-        pushBackTopic = "PA_UPDATED"
-        pushBackTopic = "PA_DELETED"
+        debug = config.QuerySide.params.debug
+        subscriber.location = config.QuerySide.locations[0]
+        subscriber.topics[0] = "PA_CREATED"
+        subscriber.topics[1] = "PA_UPDATED"
+        subscriber.topics[2] = "PA_DELETED"
 
-        if( global.debug ){
-            valueToPrettyString@S( subscriber )( str )
-            println@C( str )()
+        sleep@time( 2000 )()
+
+        if (debug ) {
+            println@console( "[DEBUG QuerySide] state:" + dumpState@runtime() )()
         }
 
-        sleep@T( 1000 )()
         subscribe@EventStore( subscriber )( res )
 
-        println@C( "Queryside subscription: " + res )()
+        println@console( "Queryside subscription: " + res )()
     }
 
     main {
         [ getParkingArea( id )( response ) {
             synchronized( dbToken ) {
-                println@C( "Get " + id )()
+                println@console( "Get " + id )()
                 if ( is_defined( global.db[id] ) ) {
                     response << global.db[id]
                 } else {
@@ -240,9 +247,9 @@ service QuerySide( config: undefined ) {
             }
         } ] { nullProcess }
         [ notify( event ) ] {
-            if( global.debug ) {
-                valueToPrettyString@S( event )( str )
-                println@C( "Notified of: " + str)()
+            if( debug ) {
+                valueToPrettyString@stringUtils( event )( str )
+                println@console( "Notified of: " + str)()
             }
             type -> event.type
             if ( type == "PA_CREATED" || type == "PA_UPDATED" ) {
@@ -259,7 +266,7 @@ service QuerySide( config: undefined ) {
             }
         }
         [ shutDown( void ) ]{
-              println@C( "Shutting down" )()
+              println@console( "Shutting down" )()
               exit
           }
     }
@@ -291,22 +298,28 @@ service EventStore( config: undefined ) {
     }
 
     inputPort IP {
-        location: config.EventStore.locations._[0]
+        location: config.EventStore.locations[0]
         protocol: http { format = "json" } 
         interfaces:
             EventStoreInterface, ShutDownInterface
     }
 
-    embed Console as C
-    embed StringUtils as S
+    embed Console as console
+    embed StringUtils as stringUtils
+    embed Runtime as runtime
 
-    init { global.debug = config.EventStore.params.debug }
+    init { 
+        debug = config.EventStore.params.debug 
+        if( debug ) {
+            println@console( "[DEBUG EventStore] state:" + dumpState@runtime() )()
+        }
+    }
 
     main {
         [ subscribe( subscriber )( response ) {
-            if( global.debug ) {
-                valueToPrettyString@S( subscriber )( str )
-                println@C( "Subscription: " + str )()
+            if( debug ) {
+                valueToPrettyString@stringUtils( subscriber )( str )
+                println@console( "Subscription: " + str )()
             }
             for( topic in subscriber.topics ) {
                 loc = subscriber.location
@@ -321,10 +334,10 @@ service EventStore( config: undefined ) {
                     }
                 } */
             }
-            if( global.debug ) {
-                valueToPrettyString@S( global.topics )( str )
-                println@C( "State of topics variable: " )()
-                println@C( str )()
+            if( debug ) {
+                valueToPrettyString@stringUtils( global.topics )( str )
+                println@console( "State of topics variable: " )()
+                println@console( str )()
             }
             response = "OK"
         } ] { nullProcess }
@@ -336,18 +349,18 @@ service EventStore( config: undefined ) {
             response = "OK"
         } ] { nullProcess }
         [ publishEvent( event ) ] {
-            if( global.debug ) {
-                valueToPrettyString@S( event )( str )
-                println@C( "Received event " + str )()
+            if( debug ) {
+                valueToPrettyString@stringUtils( event )( str )
+                println@console( "Received event " + str )()
             }
             eventsArray -> global.topics.( event.type ).events
             synchronized( dbEvents ) {
                 pushBack -> eventsArray[#eventsArray]
                 pushBack << event
             }
-            if( global.debug ) {
-                valueToPrettyString@S( eventsArray )( str )
-                println@C( "Events Array: " + str )()
+            if( debug ) {
+                valueToPrettyString@stringUtils( eventsArray )( str )
+                println@console( "Events Array: " + str )()
             }
             subscribersMap -> global.topics.( event.type ).subscribers
             foreach( subscriber : subscribersMap ) {
@@ -358,80 +371,16 @@ service EventStore( config: undefined ) {
             }
         }
         [ shutDown( void ) ]{
-              println@C( "Shutting down" )()
+              println@console( "Shutting down" )()
               exit
         }
-    }
-}
-
-service Main( config: undefined ) {
-    outputPort EventStore {
-        location: config.EventStore.locations._[0]
-        protocol: http { format = "json" }
-        interfaces:
-            EventStoreInterface,
-            ShutDownInterface
-    }
-
-    outputPort CommandSide {
-        location: config.CommandSide.locations._[0]
-        protocol: http { format = "json" }
-        interfaces:
-            CommandSideInterface,
-            ShutDownInterface
-    }
-
-    outputPort QuerySide {
-        location: config.QuerySide.locations._[0]
-        protocol: http { format = "json" }
-        interfaces:
-            QuerySideInterface,
-            ShutDownInterface
-    }
-
-    inputPort ip {
-        location: config.Main.locations._[0]
-        protocol: http { format = "json" }
-        aggregates:
-          QuerySide,
-          CommandSide
-    }
-
-    embed Time as time
-    embed Console as console
-    embed StringUtils as su
-    embed Runtime as runtime
-
-    define printLoading {
-        for(i=0,i<3,i++){sleep@time(200)();print@console(". ")()}
-        sleep@time(200)()
-        println@console( "done!" )()
-    }
-
-    init {
-        global.debug = config.Main.params.debug
-        if(is_defined(config.simulator) && config.simulator) {
-            dependencies[0] << { service = "EventStore" filepath="monolith.ol" params -> config }
-            dependencies[1] << { service = "CommandSide" filepath="monolith.ol" params -> config}
-            dependencies[2] << { service = "QuerySide" filepath="monolith.ol" params -> config}
-            println@console( "---- EMBEDDING DEPENDENCIES ----" )()
-            for( service in dependencies ) {
-                print@console( "Embedding " + service.service + ": " )()
-                loadEmbeddedService@runtime( service )()
-                printLoading
-            }
-		    }
-    }
-
-    main {
-        linkIn( Exit )
     }
 }
 
 service Test( config: undefined ) {
     execution: single
     outputPort EventStore {
-        location: config.EventStore.locations._[0]
+        location: config.EventStore.locations[0]
         protocol: http { format = "json" } 
         interfaces:
             EventStoreInterface,
@@ -439,7 +388,7 @@ service Test( config: undefined ) {
     }
 
     outputPort CommandSide {
-        location: config.CommandSide.locations._[0]
+        location: config.CommandSide.locations[0]
         protocol: http { format = "json" } 
         interfaces:
             CommandSideInterface,
@@ -447,7 +396,7 @@ service Test( config: undefined ) {
     }
 
     outputPort QuerySide {
-        location: config.QuerySide.locations._[0]
+        location: config.QuerySide.locations[0]
         protocol: http { format = "json" }
         interfaces:
             QuerySideInterface,
@@ -456,47 +405,37 @@ service Test( config: undefined ) {
 
     embed Time as time
     embed Console as console
-    embed StringUtils as su
+    embed StringUtils as stringUtils
     embed Runtime as runtime
 
     inputPort ip {
-        location: config.Test.locations._[0]
+        location: config.Test.locations[0]
         protocol: http { format = "json" }
         interfaces:
             NotificationInterface
     }
 
-    define printLoading {
-        for(i=0,i<3,i++){sleep@time(200)();print@console(". ")()}
-        sleep@time(200)()
-        println@console( "done!" )()
-    }
-
     init {
-        global.debug = config.Test.params.debug
-        if(is_defined(config.simulator) && config.simulator) {
-            dependencies[0] << { service = "EventStore" filepath="monolith.ol" params -> config }
-            dependencies[1] << { service = "CommandSide" filepath="monolith.ol" params -> config}
-            // dependencies[2] << { service = "QuerySide" filepath="monolith.ol" params -> config}
-            println@console( "---- EMBEDDING DEPENDENCIES ----" )()
-            for( service in dependencies ) {
-                print@console( "Embedding " + service.service + ": " )()
-                loadEmbeddedService@runtime( service )()
-                printLoading
-            }
-		    }
+        // defaults
+        params << {
+            delay = 1000
+            debug = false
+        }
+        // overwrite with config params
+        params << config.Test.params
+        global.params -> params
     }
 
     main {
-        sleep@time( 1000 )()
+        sleep@time( params.delay )()
         subscription << {
-            location = config.Test.locations._[0]
+            location = config.Test.locations[0]
             topics[0] = "PA_CREATED"
             topics[1] = "PA_DELETED"
         }
-        if( global.debug ){
+        if( params.debug ){
             println@console( "Subscribing as:" )()
-            valueToPrettyString@su( subscription )( dbg )
+            valueToPrettyString@stringUtils( subscription )( dbg )
             println@console( dbg )()
         }
         subscribe@EventStore( subscription )( res )
@@ -505,29 +444,29 @@ service Test( config: undefined ) {
             chargingSpeed = "FAST"
             availability[0] << { start = 8 end = 13 }
         }
-        if( global.debug ){
+        if( params.debug ){
             println@console( "Creating Parking Area:" )()
-            valueToPrettyString@su( parkingArea )( dbg )
+            valueToPrettyString@stringUtils( parkingArea )( dbg )
             println@console( dbg )()
         }
         createParkingArea@CommandSide( parkingArea )( paid )
         notify( event )
-        if( global.debug ){
+        if( params.debug ){
             println@console( "Received Event:" )()
-            valueToPrettyString@su( event )( dbg )
+            valueToPrettyString@stringUtils( event )( dbg )
             println@console( dbg )()
         }
         if( event.type != "PA_CREATED" || event.id != paid )
             throw( AssertionFailed )
 
-        if( global.debug ){
+        if( params.debug ){
             println@console( "Deleting Parking Area with ID: " + paid )()
         }
         deleteParkingArea@CommandSide( paid )()
         notify( event )
-        if( global.debug ){
+        if( params.debug ){
             println@console( "Received Event:" )()
-            valueToPrettyString@su( event )( dbg )
+            valueToPrettyString@stringUtils( event )( dbg )
             println@console( dbg )()
         }
         if( event.type != "PA_DELETED" || event.id != paid )

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2021 Valentino Picotti
+ * Copyright (C) 2021 Marco Peressotti
  * Copyright (C) 2021 Fabrizio Montesi <famontesi@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
@@ -40,40 +41,40 @@ import java.util.stream.Collectors;
 
 
 public class JolieSlicer extends JavaService {
-    private static final String PROGRAM_CHILD = "program";
-    public static final String SERVICES_CHILD = "services";
-    public static final String OUTPUT_DIRECTORY_CHILD = "outputDirectory";
-    private static final boolean INCLUDE_DOCUMENTATION = false;
+	private static final String PROGRAM_CHILD = "program";
+	public static final String SERVICES_CHILD = "services";
+	public static final String OUTPUT_DIRECTORY_CHILD = "outputDirectory";
+	private static final boolean INCLUDE_DOCUMENTATION = false;
  
-    @RequestResponse
-    public void slice( Value request ) throws FaultException {
+	@RequestResponse
+	public void slice( Value request ) throws FaultException {
 
-        final Path programPath = Path.of( request.getFirstChild( PROGRAM_CHILD ).strValue() );
-        final Set<String> services = request.getChildren( SERVICES_CHILD )
-                .stream().map(Value::strValue).collect(Collectors.toSet());
-        final Path outputDirectory;
-        if( request.hasChildren( OUTPUT_DIRECTORY_CHILD ) ) {
-            outputDirectory = Path.of(request.getFirstChild( OUTPUT_DIRECTORY_CHILD ).strValue() );
-        } else { // Generete the sliced program into a directory with the same name of the program
-            String filename = programPath.getFileName().toString();
-            int fileExtensionIndex = filename.lastIndexOf( ".ol" );
-            filename = filename.substring( 0, fileExtensionIndex );
-            outputDirectory = programPath.resolveSibling( filename );
-        }
-        ArrayList<String> newArgs = new ArrayList<>();
-        String[] interpreterArgs = Interpreter.getInstance().optionArgs();
-        
-        for(int i = 0; i < interpreterArgs.length; i++ ) {
-            if( "-p".equals(interpreterArgs[i]) ) {
-                newArgs.add(interpreterArgs[i]);
-                i++;
-                newArgs.add(interpreterArgs[i]);
-            }
-        }
-        newArgs.add( programPath.toString() );
+		final Path programPath = Path.of( request.getFirstChild( PROGRAM_CHILD ).strValue() );
+		final Set<String> services = request.getChildren( SERVICES_CHILD )
+				.stream().map(Value::strValue).collect(Collectors.toSet());
+		final Path outputDirectory;
+		if( request.hasChildren( OUTPUT_DIRECTORY_CHILD ) ) {
+			outputDirectory = Path.of(request.getFirstChild( OUTPUT_DIRECTORY_CHILD ).strValue() );
+		} else { // Generate the sliced program into a directory with the same name of the program
+			String filename = programPath.getFileName().toString();
+			int fileExtensionIndex = filename.lastIndexOf( ".ol" );
+			filename = filename.substring( 0, fileExtensionIndex );
+			outputDirectory = programPath.resolveSibling( filename );
+		}
+		ArrayList<String> newArgs = new ArrayList<>();
+		String[] interpreterArgs = Interpreter.getInstance().optionArgs();
+		
+		for(int i = 0; i < interpreterArgs.length; i++ ) {
+			if( "-p".equals(interpreterArgs[i]) ) {
+				newArgs.add(interpreterArgs[i]);
+				i++;
+				newArgs.add(interpreterArgs[i]);
+			}
+		}
+		newArgs.add( programPath.toString() );
 
-        try( CommandLineParser cmdLnParser =
-                     new CommandLineParser( newArgs.toArray(new String[0]), JolieSlicer.class.getClassLoader() ) ) {
+		try( CommandLineParser cmdLnParser =
+					 new CommandLineParser( newArgs.toArray(new String[0]), JolieSlicer.class.getClassLoader() ) ) {
 
 			Interpreter.Configuration intConf = cmdLnParser.getInterpreterConfiguration();
 
@@ -82,8 +83,7 @@ public class JolieSlicer extends JavaService {
 			semVerConfig.setCheckForMain( false );
 
 			Program program = ParsingUtils.parseProgram(
-				intConf.inputStream(),
-				intConf.programFilepath().toURI(),
+				intConf.source(),
 				intConf.charset(),
 				intConf.includePaths(),
 				intConf.packagePaths(),
@@ -92,10 +92,10 @@ public class JolieSlicer extends JavaService {
 				semVerConfig,
 				INCLUDE_DOCUMENTATION );
 
-            final Slicer slicer = Slicer.create( program, outputDirectory, services );
-            slicer.generateServiceDirectories();
-        } catch ( CommandLineException | InvalidConfigurationFileException | CodeCheckException | IOException e ) {
-            throw new FaultException( e.getClass().getSimpleName(), e );
-        }
-    }
+			final Slicer slicer = Slicer.create( program, outputDirectory, services );
+			slicer.generateServiceDirectories();
+		} catch ( CommandLineException | InvalidConfigurationFileException | CodeCheckException | IOException e ) {
+			throw new FaultException( e.getClass().getSimpleName(), e );
+		}
+	}
 }

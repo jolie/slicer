@@ -1,4 +1,4 @@
-FROM jolielang/jolie:1.12.1
+FROM jolielang/jolie:1.13.1
 COPY EventStore.ol .
 COPY config.json .
 EXPOSE 10000

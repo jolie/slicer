@@ -65,7 +65,7 @@ interface EventStoreInterface {
 service QuerySide ( config : undefined ){
 	execution: concurrent
 	inputPort InputQuery {
-		location: config.QuerySide.locations._[0]
+		location: config.QuerySide.locations[0]
 		protocol: http{
 			format = "json"
 		}
@@ -75,7 +75,7 @@ service QuerySide ( config : undefined ){
 			ShutDownInterface
 	}
 	outputPort EventStore {
-		location: config.EventStore.locations._[0]
+		location: config.EventStore.locations[0]
 		protocol: http{
 			format = "json"
 		}
@@ -85,13 +85,13 @@ service QuerySide ( config : undefined ){
 	embed StringUtils as S
 	embed Time as T
 	init {
-		global.debug = config.QuerySide.params.debug
-		subscriber.location = config.QuerySide.locations._[0]
+		debug = config.QuerySide.params.debug
+		subscriber.location = config.QuerySide.locations[0]
 		pushBackTopic[0]->subscriber.topics[#subscriber.topics]
 		pushBackTopic = "PA_CREATED"
 		pushBackTopic = "PA_UPDATED"
 		pushBackTopic = "PA_DELETED"
-		if( global.debug ){
+		if( debug ){
 			valueToPrettyString@S( subscriber )( str )
 			println@C( str )(  )
 		}
@@ -135,7 +135,7 @@ service QuerySide ( config : undefined ){
 			nullProcess
 		}
 		[ notify( event ) ]{
-			if( global.debug ){
+			if( debug ){
 				valueToPrettyString@S( event )( str )
 				println@C( "Notified of: " + str )(  )
 			}

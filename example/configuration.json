@@ -18,14 +18,11 @@
             "internal"
         ]
     },
-    "Main": {
-        "params": {},
-        "ports": [
-            "internal"
-        ]
-    },
     "Test": {
-        "params": {},
+        "params": { 
+            "debug" : false,
+            "delay" : 1000
+         },
         "ports": [
             "internal"
         ]

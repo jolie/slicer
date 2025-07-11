@@ -10,3 +10,4 @@ example/
 test/
 *.org
 Dockerfile*
+jolie-slicer.ol

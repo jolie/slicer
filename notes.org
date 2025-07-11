@@ -15,9 +15,9 @@
 * Run Slicer
 From within directory ~example/~
 #+begin_src bash
-  jolieslicer monolith.ol -c config-docker.json -o microservices
+  jolieslicer application.ol configuration.json -s output
 #+end_src
 With docker:
 #+begin_src bash
-  docker run --rm -v `pwd`:/app -u `id -u`:`id -g` --platform linux/amd64 slicer-dev monolith.ol -c config-docker.json -o microservices
+  docker run --rm -v `pwd`:/app -u `id -u`:`id -g` --platform linux/amd64 slicer-dev application.ol configuration.json -s output
 #+end_src

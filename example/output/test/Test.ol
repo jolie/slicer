@@ -72,7 +72,7 @@ interface EventStoreInterface {
 service Test ( config : undefined ){
 	execution: single
 	outputPort EventStore {
-		location: config.EventStore.locations._[0]
+		location: config.EventStore.locations[0]
 		protocol: http{
 			format = "json"
 		}
@@ -81,7 +81,7 @@ service Test ( config : undefined ){
 			ShutDownInterface
 	}
 	outputPort CommandSide {
-		location: config.CommandSide.locations._[0]
+		location: config.CommandSide.locations[0]
 		protocol: http{
 			format = "json"
 		}
@@ -90,7 +90,7 @@ service Test ( config : undefined ){
 			ShutDownInterface
 	}
 	outputPort QuerySide {
-		location: config.QuerySide.locations._[0]
+		location: config.QuerySide.locations[0]
 		protocol: http{
 			format = "json"
 		}
@@ -103,49 +103,28 @@ service Test ( config : undefined ){
 	embed StringUtils as su
 	embed Runtime as runtime
 	inputPort ip {
-		location: config.Test.locations._[0]
+		location: config.Test.locations[0]
 		protocol: http{
 			format = "json"
 		}
 		interfaces: NotificationInterface
 	}
-	define printLoading {
-		for( i = 0, i < 3, i++ ){
-			sleep@time( 200 )(  )
-			print@console( ". " )(  )
-		}
-		sleep@time( 200 )(  )
-		println@console( "done!" )(  )
-	}
 	init {
-		global.debug = config.Test.params.debug
-		if( is_defined( config.simulator ) && config.simulator ){
-			dependencies[0] << {
-				service = "EventStore"
-				filepath = "monolith.ol"
-				params -> config
-			}
-			dependencies[1] << {
-				service = "CommandSide"
-				filepath = "monolith.ol"
-				params -> config
-			}
-			println@console( "---- EMBEDDING DEPENDENCIES ----" )(  )
-			for( service[0] in dependencies ){
-				print@console( "Embedding " + service.service + ": " )(  )
-				loadEmbeddedService@runtime( service )(  )
-				printLoading
-			}
+		params << {
+			delay = 1000
+			debug = false
 		}
+		params << config.Test.params
+		global.params->params
 	}
 	main {
-		sleep@time( 1000 )(  )
+		sleep@time( params.delay )(  )
 		subscription << {
-			location = config.Test.locations._[0]
+			location = config.Test.locations[0]
 			topics[0] = "PA_CREATED"
 			topics[1] = "PA_DELETED"
 		}
-		if( global.debug ){
+		if( params.debug ){
 			println@console( "Subscribing as:" )(  )
 			valueToPrettyString@su( subscription )( dbg )
 			println@console( dbg )(  )
@@ -159,14 +138,14 @@ service Test ( config : undefined ){
 				end = 13
 			}
 		}
-		if( global.debug ){
+		if( params.debug ){
 			println@console( "Creating Parking Area:" )(  )
 			valueToPrettyString@su( parkingArea )( dbg )
 			println@console( dbg )(  )
 		}
 		createParkingArea@CommandSide( parkingArea )( paid )
 		notify( event )
-		if( global.debug ){
+		if( params.debug ){
 			println@console( "Received Event:" )(  )
 			valueToPrettyString@su( event )( dbg )
 			println@console( dbg )(  )
@@ -174,12 +153,12 @@ service Test ( config : undefined ){
 		if( event.type != "PA_CREATED" || event.id != paid ){
 			throw( AssertionFailed )
 		}
-		if( global.debug ){
+		if( params.debug ){
 			println@console( "Deleting Parking Area with ID: " + paid )(  )
 		}
 		deleteParkingArea@CommandSide( paid )(  )
 		notify( event )
-		if( global.debug ){
+		if( params.debug ){
 			println@console( "Received Event:" )(  )
 			valueToPrettyString@su( event )( dbg )
 			println@console( dbg )(  )

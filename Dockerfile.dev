@@ -1,4 +1,4 @@
-FROM jolielang/jolie:1.11.2-dev AS build
+FROM jolielang/jolie:1.13.1-dev AS build
 USER root
 WORKDIR /home/slicer
 COPY . .
